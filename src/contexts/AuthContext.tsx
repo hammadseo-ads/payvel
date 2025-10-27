@@ -46,9 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("No provider returned from login");
       }
 
-      // Simplified for now - will add full Biconomy integration
-      const { saAddress } = await initSimpleSmartAccount();
+      // Initialize Biconomy smart account with Web3Auth provider
+      const { smartAccount, saAddress } = await initSimpleSmartAccount();
       
+      setSmartAccount(smartAccount);
       setSmartAccountAddress(saAddress);
 
       // Store user mapping in database
