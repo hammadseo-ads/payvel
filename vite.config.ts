@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: ['@web3auth/modal', '@web3auth/base', '@web3auth/no-modal', '@web3auth/auth', '@toruslabs/starkware-crypto'],
-    include: ['bn.js'],
+    include: ['bn.js', 'elliptic'],
     esbuildOptions: {
       define: {
         global: "globalThis",
