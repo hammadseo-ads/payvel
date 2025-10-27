@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
-import { cjsInterop } from "vite-plugin-cjs-interop";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -14,21 +13,12 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     nodePolyfills({
-      include: ["buffer", "process", "assert", "crypto", "stream", "util"],
+      include: ["buffer", "process"],
       globals: {
         Buffer: true,
         global: true,
         process: true,
       },
-    }),
-    cjsInterop({
-      dependencies: [
-        'enc-utils',
-        '@toruslabs/starkware-crypto',
-        'elliptic',
-        'bn.js',
-        'bip39',
-      ],
     }),
     mode === "development" && componentTagger(),
   ].filter(Boolean),
@@ -37,44 +27,15 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
     },
-    dedupe: ['react', 'react-dom'],
   },
   define: {
     global: "globalThis",
   },
   optimizeDeps: {
-    exclude: [
-      '@web3auth/modal',
-      '@web3auth/base',
-      '@web3auth/no-modal',
-      '@web3auth/auth',
-      '@toruslabs/openlogin',
-      '@toruslabs/openlogin-jrpc',
-      '@toruslabs/openlogin-utils',
-      '@toruslabs/starkware-crypto',
-    ],
-    include: [
-      'enc-utils',
-      'bn.js',
-      'elliptic',
-      'hash.js',
-      'hmac-drbg',
-      'brorand',
-      'minimalistic-assert',
-      'minimalistic-crypto-utils',
-      'inherits',
-      'safe-buffer',
-      'bip39',
-    ],
     esbuildOptions: {
       define: {
         global: "globalThis",
       },
-    },
-  },
-  build: {
-    commonjsOptions: {
-      transformMixedEsModules: true,
     },
   },
 }));

@@ -1,5 +1,4 @@
 import { Web3Auth } from "@web3auth/modal";
-import { CHAIN_NAMESPACES } from "@web3auth/base";
 
 const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || "";
 
@@ -13,21 +12,7 @@ export async function getWeb3Auth() {
   web3authInstance = new Web3Auth({
     clientId,
     web3AuthNetwork: "sapphire_devnet",
-    chainConfig: {
-      chainNamespace: CHAIN_NAMESPACES.EIP155,
-      chainId: "0x14A34",
-      rpcTarget: "https://sepolia.base.org",
-      displayName: "Base Sepolia",
-      blockExplorerUrl: "https://sepolia.basescan.org",
-      ticker: "ETH",
-      tickerName: "Ethereum",
-    },
-    uiConfig: {
-      appName: "Payvel",
-      loginMethodsOrder: ["google"],
-      defaultLanguage: "en",
-    },
-  } as any);
+  });
 
   await web3authInstance.init();
   return web3authInstance;
@@ -46,25 +31,10 @@ export async function initWeb3Auth() {
 export async function loginWithGoogle() {
   try {
     const web3auth = await getWeb3Auth();
-    
-    if (!web3auth) {
-      throw new Error("Web3Auth not initialized");
-    }
-
-    console.log("Starting Google login...");
     const provider = await web3auth.connect();
-    
-    if (!provider) {
-      throw new Error("Failed to get provider from Web3Auth");
-    }
-    
-    console.log("Google login successful, provider obtained");
     return provider;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error logging in with Google:", error);
-    if (error.message?.includes("User closed the modal")) {
-      throw new Error("Login cancelled");
-    }
     throw error;
   }
 }
