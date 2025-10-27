@@ -14,7 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      tx_logs: {
+        Row: {
+          amount: string | null
+          chain_id: string
+          created_at: string | null
+          data: string | null
+          id: string
+          status: string | null
+          to_address: string
+          tx_hash: string | null
+          user_id: string
+          user_op_hash: string | null
+        }
+        Insert: {
+          amount?: string | null
+          chain_id: string
+          created_at?: string | null
+          data?: string | null
+          id?: string
+          status?: string | null
+          to_address: string
+          tx_hash?: string | null
+          user_id: string
+          user_op_hash?: string | null
+        }
+        Update: {
+          amount?: string | null
+          chain_id?: string
+          created_at?: string | null
+          data?: string | null
+          id?: string
+          status?: string | null
+          to_address?: string
+          tx_hash?: string | null
+          user_id?: string
+          user_op_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tx_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          smart_account_address: string | null
+          updated_at: string | null
+          web3auth_user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          smart_account_address?: string | null
+          updated_at?: string | null
+          web3auth_user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          smart_account_address?: string | null
+          updated_at?: string | null
+          web3auth_user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
