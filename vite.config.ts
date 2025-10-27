@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
     },
-    dedupe: ["enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39", "loglevel", "deepmerge", "cipher-base", "randombytes", "base64url", "events"],
+    dedupe: ["react", "react-dom", "enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39", "loglevel", "deepmerge", "cipher-base", "randombytes", "base64url", "events"],
     conditions: ["module", "import", "browser", "default"],
   },
   define: {
@@ -63,6 +63,8 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: [
+      "react",
+      "react-dom",
       "enc-utils",
       "bn.js",
       "elliptic",
