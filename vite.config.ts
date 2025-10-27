@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
+import { cjsInterop } from "vite-plugin-cjs-interop";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -20,13 +21,20 @@ export default defineConfig(({ mode }) => ({
         process: true,
       },
     }),
+    cjsInterop({
+      dependencies: [
+        "enc-utils",
+        "elliptic",
+        "bn.js",
+        "@toruslabs/starkware-crypto",
+      ],
+    }),
     mode === "development" && componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
-      "enc-utils": "enc-utils/dist/index.js",
     },
     dedupe: ["enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto"],
   },

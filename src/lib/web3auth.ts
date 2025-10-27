@@ -1,4 +1,5 @@
 import { Web3Auth } from "@web3auth/modal";
+import { CHAIN_NAMESPACES } from "@web3auth/base";
 
 const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || "";
 
@@ -34,7 +35,7 @@ export async function loginWithGoogle() {
     
     console.log("🔐 Initiating Google login...");
     
-    // Connect with Google as the login provider
+    // Connect to Web3Auth with Google
     const provider = await web3auth.connect();
     
     if (!provider) {
