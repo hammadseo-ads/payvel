@@ -29,6 +29,10 @@ export default defineConfig(({ mode }) => ({
         "@toruslabs/starkware-crypto",
         "bip39",
         "loglevel",
+        "deepmerge",
+        "cipher-base",
+        "randombytes",
+        "browserify-aes",
       ],
     }),
     mode === "development" && componentTagger(),
@@ -38,7 +42,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
     },
-    dedupe: ["enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39", "loglevel"],
+    dedupe: ["enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39", "loglevel", "deepmerge", "cipher-base", "randombytes"],
     conditions: ["module", "import", "browser", "default"],
   },
   define: {
@@ -62,6 +66,10 @@ export default defineConfig(({ mode }) => ({
       "sha.js",
       "ripemd160",
       "loglevel",
+      "deepmerge",
+      "cipher-base",
+      "randombytes",
+      "browserify-aes",
     ],
     exclude: [
       "@web3auth/modal",
@@ -82,6 +90,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     commonjsOptions: {
       transformMixedEsModules: true,
+      defaultIsModuleExports: true,
     },
   },
 }));
