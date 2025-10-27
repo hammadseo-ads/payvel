@@ -1,15 +1,32 @@
-// Simplified placeholder for Biconomy integration
-// Will be fully implemented once Web3Auth is working
+import { getWalletClientFromProvider, initSmartAccount, shortenAddress as biconomyShortenAddress } from "./biconomy";
 
 export function shortenAddress(address: string, chars = 4): string {
-  if (!address) return "";
-  return `${address.substring(0, chars + 2)}...${address.substring(address.length - chars)}`;
+  return biconomyShortenAddress(address, chars);
 }
 
 export async function initSimpleSmartAccount() {
-  // Placeholder - will integrate with actual Biconomy SDK
-  return {
-    smartAccount: null,
-    saAddress: "0x1234567890123456789012345678901234567890"
-  };
+  try {
+    // Get Web3Auth provider
+    const web3auth = (await import("./web3auth")).getWeb3Auth();
+    const instance = await web3auth;
+    const provider = instance.provider;
+    
+    if (!provider) {
+      throw new Error("No provider available from Web3Auth");
+    }
+
+    // Create wallet client from Web3Auth provider
+    const walletClient = await getWalletClientFromProvider(provider);
+    
+    // Initialize Biconomy smart account
+    const { smartAccount, saAddress } = await initSmartAccount(walletClient);
+    
+    return {
+      smartAccount,
+      saAddress
+    };
+  } catch (error) {
+    console.error("Error initializing smart account:", error);
+    throw error;
+  }
 }
