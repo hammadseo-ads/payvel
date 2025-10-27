@@ -28,6 +28,7 @@ export default defineConfig(({ mode }) => ({
         "bn.js",
         "@toruslabs/starkware-crypto",
         "bip39",
+        "loglevel",
       ],
     }),
     mode === "development" && componentTagger(),
@@ -37,7 +38,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
     },
-    dedupe: ["enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39"],
+    dedupe: ["enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39", "loglevel"],
     conditions: ["module", "import", "browser", "default"],
   },
   define: {
@@ -60,6 +61,7 @@ export default defineConfig(({ mode }) => ({
       "pbkdf2",
       "sha.js",
       "ripemd160",
+      "loglevel",
     ],
     exclude: [
       "@web3auth/modal",
