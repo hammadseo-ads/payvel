@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     nodePolyfills({
-      include: ["buffer", "process"],
+      include: ["buffer", "process", "assert", "crypto", "stream", "util"],
       globals: {
         Buffer: true,
         global: true,
@@ -26,16 +26,45 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
+      "enc-utils": "enc-utils/dist/index.js",
     },
+    dedupe: ["enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto"],
   },
   define: {
     global: "globalThis",
   },
   optimizeDeps: {
+    include: [
+      "enc-utils",
+      "bn.js",
+      "elliptic",
+      "hash.js",
+      "hmac-drbg",
+      "brorand",
+      "minimalistic-assert",
+      "minimalistic-crypto-utils",
+      "inherits",
+      "safe-buffer",
+    ],
+    exclude: [
+      "@web3auth/modal",
+      "@web3auth/base",
+      "@web3auth/no-modal",
+      "@web3auth/auth",
+      "@toruslabs/openlogin",
+      "@toruslabs/openlogin-jrpc",
+      "@toruslabs/openlogin-utils",
+      "@toruslabs/starkware-crypto",
+    ],
     esbuildOptions: {
       define: {
         global: "globalThis",
       },
+    },
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
     },
   },
 }));

@@ -31,10 +31,27 @@ export async function initWeb3Auth() {
 export async function loginWithGoogle() {
   try {
     const web3auth = await getWeb3Auth();
+    
+    console.log("🔐 Initiating Google login...");
+    
+    // Connect with Google as the login provider
     const provider = await web3auth.connect();
+    
+    if (!provider) {
+      throw new Error("No provider returned from Google login");
+    }
+    
+    // Verify user info
+    const userInfo = await web3auth.getUserInfo();
+    console.log("✅ User Info:", userInfo ? "received" : "MISSING");
+    
+    if (!userInfo) {
+      throw new Error("Google authentication failed - no user info received");
+    }
+    
     return provider;
   } catch (error) {
-    console.error("Error logging in with Google:", error);
+    console.error("❌ Error logging in with Google:", error);
     throw error;
   }
 }

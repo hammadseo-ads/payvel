@@ -29,7 +29,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function initializeAuth() {
     try {
-      await initWeb3Auth();
+      const web3auth = await initWeb3Auth();
+      
+      // Check if user returned from redirect
+      const isConnected = 
+        (web3auth as any).connected === true ||
+        (web3auth as any).status === "connected" ||
+        !!web3auth.provider;
+      
+      if (isConnected && web3auth.provider) {
+        console.log("🔄 Resuming login after redirect...");
+        
+        // Verify user info
+        const userInfo = await web3auth.getUserInfo();
+        
+        if (!userInfo) {
+          console.warn("⚠️ No user info after resume");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Initialize smart account
+        const { smartAccount, saAddress } = await initSimpleSmartAccount();
+        setSmartAccount(smartAccount);
+        setSmartAccountAddress(saAddress);
+        
+        // Store user mapping in database
+        const { data, error } = await supabase.functions.invoke("account-create", {
+          body: { smartAccountAddress: saAddress },
+        });
+        
+        if (error) {
+          console.error("Failed to create account mapping:", error);
+        }
+        
+        if (data?.email) {
+          setUserEmail(data.email);
+        }
+        
+        setIsAuthenticated(true);
+        toast.success("Successfully logged in!");
+      }
+      
       setIsLoading(false);
     } catch (error) {
       console.error("Failed to initialize auth:", error);
