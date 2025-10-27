@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => ({
         '@toruslabs/starkware-crypto',
         'elliptic',
         'bn.js',
+        'bip39',
       ],
     }),
     mode === "development" && componentTagger(),
@@ -63,6 +64,7 @@ export default defineConfig(({ mode }) => ({
       'minimalistic-crypto-utils',
       'inherits',
       'safe-buffer',
+      'bip39',
     ],
     esbuildOptions: {
       define: {
