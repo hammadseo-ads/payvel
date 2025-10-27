@@ -33,6 +33,7 @@ export default defineConfig(({ mode }) => ({
         "cipher-base",
         "randombytes",
         "browserify-aes",
+        "base64url",
       ],
     }),
     mode === "development" && componentTagger(),
@@ -42,7 +43,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
     },
-    dedupe: ["enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39", "loglevel", "deepmerge", "cipher-base", "randombytes"],
+    dedupe: ["enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39", "loglevel", "deepmerge", "cipher-base", "randombytes", "base64url"],
     conditions: ["module", "import", "browser", "default"],
   },
   define: {
@@ -70,6 +71,7 @@ export default defineConfig(({ mode }) => ({
       "cipher-base",
       "randombytes",
       "browserify-aes",
+      "base64url",
     ],
     exclude: [
       "@web3auth/modal",
