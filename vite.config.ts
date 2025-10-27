@@ -27,11 +27,13 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
     },
+    dedupe: ['react', 'react-dom'],
   },
   define: {
     global: "globalThis",
   },
   optimizeDeps: {
+    exclude: ['@web3auth/modal', '@web3auth/base'],
     esbuildOptions: {
       define: {
         global: "globalThis",
