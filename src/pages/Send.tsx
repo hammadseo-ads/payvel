@@ -1,0 +1,140 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { ethers } from "ethers";
+
+const Send = () => {
+  const { smartAccount, smartAccountAddress } = useAuth();
+  const navigate = useNavigate();
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSend = async () => {
+    if (!recipient || !amount) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    if (!ethers.utils.isAddress(recipient)) {
+      toast.error("Invalid recipient address");
+      return;
+    }
+
+    if (parseFloat(amount) <= 0) {
+      toast.error("Amount must be greater than 0");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Build transaction
+      const tx = {
+        to: recipient,
+        value: ethers.utils.parseEther(amount).toString(),
+        data: "0x",
+      };
+
+      const userOp = await smartAccount.buildUserOp([tx]);
+
+      // Submit via backend for policy checks
+      const { data, error } = await supabase.functions.invoke("tx-submit", {
+        body: {
+          userOp,
+          chainId: import.meta.env.VITE_CHAIN_ID,
+          to: recipient,
+          amount,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to submit transaction");
+      }
+
+      toast.success("Transaction submitted successfully!");
+      navigate("/dashboard");
+    } catch (error: any) {
+      console.error("Send error:", error);
+      toast.error(error.message || "Failed to send transaction");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Button>
+
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Send</h1>
+            <p className="text-muted-foreground">Send ETH to any address</p>
+          </div>
+
+          <Card className="p-6 glass-effect">
+            <div className="space-y-6">
+              <div>
+                <Label htmlFor="recipient">Recipient Address</Label>
+                <Input
+                  id="recipient"
+                  placeholder="0x..."
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="amount">Amount (ETH)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.001"
+                  placeholder="0.0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+
+              <div className="p-4 rounded-lg bg-secondary/10 border border-secondary/20">
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-secondary font-medium">Sponsored by Payvel:</span> Gas fees are covered under our policy limits
+                </p>
+              </div>
+
+              <Button
+                onClick={handleSend}
+                disabled={isSubmitting || !recipient || !amount}
+                className="w-full h-12 glow-effect"
+              >
+                {isSubmitting ? "Submitting..." : "Send Transaction"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Send;
