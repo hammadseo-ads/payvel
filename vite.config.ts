@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
+      'enc-utils': 'enc-utils/dist/index.js',
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -44,6 +45,7 @@ export default defineConfig(({ mode }) => ({
       '@toruslabs/starkware-crypto',
     ],
     include: [
+      'enc-utils',
       'bn.js',
       'elliptic',
       'hash.js',
