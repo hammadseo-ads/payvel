@@ -1,23 +1,24 @@
-import { ethers } from "ethers";
-import { BiconomySmartAccountV2, DEFAULT_ENTRYPOINT_ADDRESS } from "@biconomy/account";
+import { createWalletClient, custom, type WalletClient } from "viem";
+import { baseSepolia } from "viem/chains";
+import { createSmartAccountClient } from "@biconomy/account";
 
-export async function getSignerFromProvider(provider: any) {
-  const ethersProvider = new ethers.providers.Web3Provider(provider);
-  const signer = ethersProvider.getSigner();
-  return signer;
+export async function getWalletClientFromProvider(provider: any): Promise<WalletClient> {
+  const walletClient = createWalletClient({
+    chain: baseSepolia,
+    transport: custom(provider),
+  });
+  return walletClient;
 }
 
-export async function initSmartAccount(signer: any) {
+export async function initSmartAccount(walletClient: WalletClient) {
   try {
     const bundlerUrl = import.meta.env.VITE_BICONOMY_BUNDLER_URL || "";
     const biconomyApiKey = import.meta.env.VITE_BICONOMY_API_KEY || "";
 
-    const smartAccount = await BiconomySmartAccountV2.create({
-      signer,
-      chainId: parseInt(import.meta.env.VITE_CHAIN_ID?.replace("0x", "") || "84532", 16),
+    const smartAccount = await createSmartAccountClient({
+      signer: walletClient,
       bundlerUrl,
       biconomyPaymasterApiKey: biconomyApiKey,
-      entryPointAddress: DEFAULT_ENTRYPOINT_ADDRESS,
     });
 
     const saAddress = await smartAccount.getAccountAddress();

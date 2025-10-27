@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { initWeb3Auth, loginWithGoogle, logout as web3Logout } from "@/lib/web3auth";
-import { getSignerFromProvider, initSmartAccount } from "@/lib/biconomy";
+import { initSimpleSmartAccount, shortenAddress } from "@/lib/biconomy-simple";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -46,10 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("No provider returned from login");
       }
 
-      const signer = await getSignerFromProvider(provider);
-      const { smartAccount: sa, saAddress } = await initSmartAccount(signer);
+      // Simplified for now - will add full Biconomy integration
+      const { saAddress } = await initSimpleSmartAccount();
       
-      setSmartAccount(sa);
       setSmartAccountAddress(saAddress);
 
       // Store user mapping in database
@@ -59,7 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error("Failed to create account mapping:", error);
-        throw error;
       }
 
       if (data?.email) {

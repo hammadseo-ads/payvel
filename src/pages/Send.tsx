@@ -9,14 +9,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ethers } from "ethers";
 
 const Send = () => {
-  const { smartAccount, smartAccountAddress } = useAuth();
+  const { smartAccount } = useAuth();
   const navigate = useNavigate();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isValidAddress = (address: string) => {
+    return address.startsWith("0x") && address.length === 42;
+  };
 
   const handleSend = async () => {
     if (!recipient || !amount) {
@@ -24,7 +27,7 @@ const Send = () => {
       return;
     }
 
-    if (!ethers.utils.isAddress(recipient)) {
+    if (!isValidAddress(recipient)) {
       toast.error("Invalid recipient address");
       return;
     }
@@ -37,22 +40,12 @@ const Send = () => {
     setIsSubmitting(true);
 
     try {
-      // Build transaction
-      const tx = {
-        to: recipient,
-        value: ethers.utils.parseEther(amount).toString(),
-        data: "0x",
-      };
-
-      const userOp = await smartAccount.buildUserOp([tx]);
-
       // Submit via backend for policy checks
       const { data, error } = await supabase.functions.invoke("tx-submit", {
         body: {
-          userOp,
-          chainId: import.meta.env.VITE_CHAIN_ID,
           to: recipient,
           amount,
+          chainId: import.meta.env.VITE_CHAIN_ID,
         },
       });
 
