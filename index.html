@@ -18,6 +18,10 @@
   </head>
 
   <body>
+    <script>
+      // Early Buffer polyfill - ensures Buffer is available before any module loads
+      window.global = window;
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -3,7 +3,8 @@ import App from "./App.tsx";
 import "./index.css";
 import { Buffer } from "buffer";
 
-// Polyfill Buffer for Web3Auth
+// Polyfill Buffer for Web3Auth - multiple assignments for maximum compatibility
 globalThis.Buffer = Buffer;
+window.Buffer = Buffer;
 
 createRoot(document.getElementById("root")!).render(<App />);
