@@ -35,14 +35,12 @@ export async function loginWithGoogle() {
     
     console.log("🔐 Initiating Google login...");
     
-    // Connect to Web3Auth with Google
     const provider = await web3auth.connect();
     
     if (!provider) {
       throw new Error("No provider returned from Google login");
     }
     
-    // Verify user info
     const userInfo = await web3auth.getUserInfo();
     console.log("✅ User Info:", userInfo ? "received" : "MISSING");
     

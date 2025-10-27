@@ -37,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (web3auth as any).status === "connected" ||
         !!web3auth.provider;
       
+      console.log("🔍 Connection status:", { isConnected, provider: !!web3auth.provider });
+      
       if (isConnected && web3auth.provider) {
         console.log("🔄 Resuming login after redirect...");
         
