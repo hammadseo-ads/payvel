@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     nodePolyfills({
-      include: ["buffer", "process"],
+      include: ["buffer", "process", "assert"],
       globals: {
         Buffer: true,
         global: true,
