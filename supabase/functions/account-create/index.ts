@@ -33,6 +33,11 @@ serve(async (req) => {
           audience: web3AuthClientId,
         });
         
+        console.log("🔍 Token verification details:");
+        console.log("   Issuer:", payload.iss);
+        console.log("   Audience:", payload.aud);
+        console.log("   Expected Client ID:", web3AuthClientId);
+        
         console.log("✅ ID token verified successfully");
         console.log("👤 User ID:", payload.sub);
         console.log("📧 Email:", payload.email);

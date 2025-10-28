@@ -17,8 +17,13 @@ let web3authInstance: Web3Auth | null = null;
 
 export async function getWeb3Auth() {
   if (web3authInstance) {
+    console.log('✅ Returning existing Web3Auth instance');
     return web3authInstance;
   }
+
+  console.log('🔧 Initializing new Web3Auth instance...');
+  console.log('📋 Client ID:', clientId ? clientId.substring(0, 10) + '...' : 'MISSING');
+  console.log('🌐 Network:', 'sapphire_devnet');
 
   web3authInstance = new Web3Auth({
     clientId,
@@ -30,30 +35,35 @@ export async function getWeb3Auth() {
       loginMethodsOrder: ["google", "email_passwordless", "sms_passwordless"],
     },
     modalConfig: {
-      [WALLET_ADAPTERS.AUTH]: {
-        label: 'auth',
-        loginMethods: {
-          google: {
-            name: 'Continue with Google',
-            showOnModal: true,
-            authConnectionId: 'payvel-connection',
-          },
-          email_passwordless: {
-            name: 'Continue with Email',
-            showOnModal: true,
-            authConnectionId: 'payvel-email-connection',
-          },
-          sms_passwordless: {
-            name: 'Continue with SMS',
-            showOnModal: true,
-            authConnectionId: 'payvel-sms-connection',
+      connectors: {
+        [WALLET_ADAPTERS.AUTH]: {
+          label: 'auth',
+          loginMethods: {
+            google: {
+              name: 'Continue with Google',
+              showOnModal: true,
+              authConnectionId: 'payvel-connection',
+            },
+            email_passwordless: {
+              name: 'Continue with Email',
+              showOnModal: true,
+              authConnectionId: 'payvel-email-connection',
+            },
+            sms_passwordless: {
+              name: 'Continue with SMS',
+              showOnModal: true,
+              authConnectionId: 'payvel-sms-connection',
+            },
           },
         },
       },
     },
   } as any);
 
+  console.log('⚙️ Calling web3auth.init()...');
   await web3authInstance.init();
+  console.log('✅ Web3Auth initialized successfully');
+  
   return web3authInstance;
 }
 
