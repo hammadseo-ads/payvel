@@ -1,4 +1,4 @@
-import { Web3Auth } from "@web3auth/modal";
+import { Web3Auth, WALLET_CONNECTORS } from "@web3auth/modal";
 import { CHAIN_NAMESPACES, WALLET_ADAPTERS } from "@web3auth/base";
 
 const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || "";
@@ -36,7 +36,7 @@ export async function getWeb3Auth() {
     },
     modalConfig: {
       connectors: {
-        [WALLET_ADAPTERS.AUTH]: {
+        [WALLET_CONNECTORS.AUTH]: {
           label: 'auth',
           loginMethods: {
             google: {
