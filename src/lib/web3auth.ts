@@ -57,19 +57,22 @@ export async function loginWithGoogle() {
     console.log("✅ User Info:", userInfo ? "received" : "MISSING");
     console.log("👤 User email:", userInfo?.email);
     
-    // Check if idToken is available in userInfo
-    const idToken = (userInfo as any)?.idToken;
-    console.log("🔑 ID Token present:", !!idToken);
-    
-    if (!idToken) {
-      console.warn("⚠️ No ID Token in user info - backend verification may be limited");
-    }
-    
     if (!userInfo) {
       throw new Error("Google authentication failed - no user info received");
     }
     
-    return provider;
+    // CRITICAL: Get Identity Token using authenticateUser
+    // Cast to any as the method exists but may not be in type definitions
+    const authResult = await (web3auth as any).authenticateUser?.();
+    const idToken = authResult?.idToken;
+    console.log("🔑 ID Token:", idToken ? "received" : "MISSING");
+    
+    if (!idToken) {
+      console.error("⚠️ Failed to retrieve ID token - authentication may be incomplete");
+      // Continue anyway as the provider is available
+    }
+    
+    return { provider, idToken: (idToken as string) || "" };
   } catch (error) {
     console.error("❌ Error logging in with Google:", error);
     throw error;

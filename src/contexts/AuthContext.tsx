@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
+  const [idToken, setIdToken] = useState<string | null>(null);
 
   useEffect(() => {
     initializeAuth();
@@ -53,13 +54,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         console.log("👤 User email:", userInfo.email);
         
-        // Check for ID token in user info
-        const idToken = (userInfo as any)?.idToken;
+        // Get ID Token using authenticateUser (cast to any for v10 compatibility)
+        const authResult = await (web3auth as any).authenticateUser?.();
+        const idToken = authResult?.idToken;
         console.log("🔑 ID Token present:", !!idToken);
         
         if (!idToken) {
-          console.warn("⚠️ No ID Token - proceeding without backend verification token");
+          console.error("❌ No idToken - authentication incomplete");
+          setIsLoading(false);
+          return;
         }
+        
+        setIdToken(idToken as string);
         
         // Initialize smart account
         console.log("🔧 Initializing smart account...");
@@ -70,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Store user mapping in database
         const { data, error } = await supabase.functions.invoke("account-create", {
-          body: { smartAccountAddress: saAddress },
+          body: { 
+            smartAccountAddress: saAddress,
+            idToken: idToken,
+          },
         });
         
         if (error) {
@@ -95,11 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login() {
     try {
       setIsLoading(true);
-      const provider = await loginWithGoogle();
+      const { provider, idToken } = await loginWithGoogle();
       
       if (!provider) {
         throw new Error("No provider returned from login");
       }
+      
+      setIdToken(idToken);
 
       // Initialize Biconomy smart account with Web3Auth provider
       const { smartAccount, saAddress } = await initSimpleSmartAccount();
@@ -109,7 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Store user mapping in database
       const { data, error } = await supabase.functions.invoke("account-create", {
-        body: { smartAccountAddress: saAddress },
+        body: { 
+          smartAccountAddress: saAddress,
+          idToken: idToken,
+        },
       });
 
       if (error) {
@@ -138,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSmartAccountAddress(null);
       setUserEmail(null);
       setSmartAccount(null);
+      setIdToken(null);
       toast.success("Successfully logged out");
     } catch (error) {
       console.error("Logout failed:", error);
