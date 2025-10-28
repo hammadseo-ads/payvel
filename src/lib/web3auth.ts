@@ -23,6 +23,11 @@ export async function getWeb3Auth() {
   web3authInstance = new Web3Auth({
     clientId,
     web3AuthNetwork: "sapphire_devnet",
+    uiConfig: {
+      appName: "Payvel",
+      mode: "dark",
+      loginMethodsOrder: ["google", "email_passwordless", "sms_passwordless"],
+    },
   });
 
   await web3authInstance.init();
@@ -39,17 +44,27 @@ export async function initWeb3Auth() {
   }
 }
 
-export async function loginWithGoogle() {
+async function loginWithProvider(loginProvider?: string, extraLoginOptions?: any) {
   try {
     const web3auth = await getWeb3Auth();
     
-    console.log("🔐 Initiating Google login with explicit connection...");
+    console.log(`🔐 Initiating login${loginProvider ? ` with ${loginProvider}` : ''}...`);
     
-    // Explicit Google login with loginProvider option
-    const provider = await web3auth.connect();
+    let provider;
+    
+    if (loginProvider) {
+      // Explicit login with specific provider
+      provider = await web3auth.connectTo("auth" as any, {
+        loginProvider,
+        extraLoginOptions,
+      });
+    } else {
+      // Open modal with all options
+      provider = await web3auth.connect();
+    }
     
     if (!provider) {
-      throw new Error("No provider returned from Google login");
+      throw new Error("No provider returned from login");
     }
     
     // Get user info
@@ -58,25 +73,41 @@ export async function loginWithGoogle() {
     console.log("👤 User email:", userInfo?.email);
     
     if (!userInfo) {
-      throw new Error("Google authentication failed - no user info received");
+      throw new Error("Authentication failed - no user info received");
     }
     
     // CRITICAL: Get Identity Token using authenticateUser
-    // Cast to any as the method exists but may not be in type definitions
     const authResult = await (web3auth as any).authenticateUser?.();
     const idToken = authResult?.idToken;
     console.log("🔑 ID Token:", idToken ? "received" : "MISSING");
     
     if (!idToken) {
-      console.error("⚠️ Failed to retrieve ID token - authentication may be incomplete");
-      // Continue anyway as the provider is available
+      throw new Error("Failed to retrieve ID token - authentication incomplete");
     }
     
-    return { provider, idToken: (idToken as string) || "" };
+    return { provider, idToken: (idToken as string) };
   } catch (error) {
-    console.error("❌ Error logging in with Google:", error);
+    console.error("❌ Error during login:", error);
     throw error;
   }
+}
+
+export async function loginWithGoogle() {
+  return loginWithProvider("google", {
+    login_hint: "",
+  });
+}
+
+export async function loginWithEmail() {
+  return loginWithProvider("email_passwordless");
+}
+
+export async function loginWithSMS() {
+  return loginWithProvider("sms_passwordless");
+}
+
+export async function loginWithModal() {
+  return loginWithProvider();
 }
 
 export async function logout() {
