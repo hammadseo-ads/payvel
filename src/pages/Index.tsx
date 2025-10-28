@@ -5,7 +5,7 @@ import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AuthMethodSelector } from "@/components/AuthMethodSelector";
 
 const Index = () => {
-  const { login, loginWithEmailMethod, loginWithSMSMethod, loginWithModalMethod, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(true);
 
@@ -25,10 +25,7 @@ const Index = () => {
 
   return (
     <AuthMethodSelector
-      onGoogleLogin={login}
-      onEmailLogin={loginWithEmailMethod}
-      onSMSLogin={loginWithSMSMethod}
-      onShowAllOptions={loginWithModalMethod}
+      onGetStarted={login}
       isLoading={isLoading}
     />
   );

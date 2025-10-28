@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { initWeb3Auth, loginWithGoogle, loginWithEmail, loginWithSMS, loginWithModal, logout as web3Logout } from "@/lib/web3auth";
+import { initWeb3Auth, login as web3Login, logout as web3Logout } from "@/lib/web3auth";
 import { initSimpleSmartAccount, shortenAddress } from "@/lib/biconomy-simple";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -10,9 +10,6 @@ interface AuthContextType {
   smartAccountAddress: string | null;
   userEmail: string | null;
   login: () => Promise<void>;
-  loginWithEmailMethod: () => Promise<void>;
-  loginWithSMSMethod: () => Promise<void>;
-  loginWithModalMethod: () => Promise<void>;
   logout: () => Promise<void>;
   smartAccount: any;
 }
@@ -107,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login() {
     try {
       setIsLoading(true);
-      const { provider, idToken } = await loginWithGoogle();
+      const { provider, idToken } = await web3Login();
       
       if (!provider) {
         throw new Error("No provider returned from login");
@@ -146,62 +143,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }
-
-  async function handleLogin(loginFn: typeof loginWithGoogle) {
-    try {
-      setIsLoading(true);
-      const { provider, idToken } = await loginFn();
-      
-      if (!provider) {
-        throw new Error("No provider returned from login");
-      }
-      
-      setIdToken(idToken);
-
-      // Initialize Biconomy smart account with Web3Auth provider
-      const { smartAccount, saAddress } = await initSimpleSmartAccount();
-      
-      setSmartAccount(smartAccount);
-      setSmartAccountAddress(saAddress);
-
-      // Store user mapping in database
-      const { data, error } = await supabase.functions.invoke("account-create", {
-        body: { 
-          smartAccountAddress: saAddress,
-          idToken: idToken,
-        },
-      });
-
-      if (error) {
-        console.error("Failed to create account mapping:", error);
-      }
-
-      if (data?.email) {
-        setUserEmail(data.email);
-      }
-
-      setIsAuthenticated(true);
-      toast.success("Successfully logged in!");
-    } catch (error: any) {
-      console.error("Login failed:", error);
-      toast.error(error.message || "Failed to login");
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function loginWithEmailMethod() {
-    return handleLogin(loginWithEmail);
-  }
-
-  async function loginWithSMSMethod() {
-    return handleLogin(loginWithSMS);
-  }
-
-  async function loginWithModalMethod() {
-    return handleLogin(loginWithModal);
   }
 
   async function logout() {
@@ -227,9 +168,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         smartAccountAddress,
         userEmail,
         login,
-        loginWithEmailMethod,
-        loginWithSMSMethod,
-        loginWithModalMethod,
         logout,
         smartAccount,
       }}

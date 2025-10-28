@@ -67,26 +67,14 @@ export async function initWeb3Auth() {
   }
 }
 
-async function loginWithProvider(loginProvider?: string, authConnectionId?: string) {
+async function loginWithModal() {
   try {
     const web3auth = await getWeb3Auth();
     
-    console.log(`🔐 Initiating login${loginProvider ? ` with ${loginProvider}` : ''}...`);
+    console.log('🔐 Opening login modal with all options...');
     
-    let provider;
-    
-    if (loginProvider && authConnectionId) {
-      // Explicit login with specific provider and connection ID
-      provider = await web3auth.connectTo(WALLET_ADAPTERS.AUTH as any, {
-        loginProvider,
-        extraLoginOptions: {
-          authConnectionId,
-        },
-      });
-    } else {
-      // Open modal with all options
-      provider = await web3auth.connect();
-    }
+    // Open modal with all options
+    const provider = await web3auth.connect();
     
     if (!provider) {
       throw new Error("No provider returned from login");
@@ -117,20 +105,8 @@ async function loginWithProvider(loginProvider?: string, authConnectionId?: stri
   }
 }
 
-export async function loginWithGoogle() {
-  return loginWithProvider("google", "payvel-connection");
-}
-
-export async function loginWithEmail() {
-  return loginWithProvider("email_passwordless", "payvel-email-connection");
-}
-
-export async function loginWithSMS() {
-  return loginWithProvider("sms_passwordless", "payvel-sms-connection");
-}
-
-export async function loginWithModal() {
-  return loginWithProvider();
+export async function login() {
+  return loginWithModal();
 }
 
 export async function logout() {
