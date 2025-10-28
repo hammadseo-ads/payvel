@@ -23,26 +23,30 @@ export async function getWeb3Auth() {
   web3authInstance = new Web3Auth({
     clientId,
     web3AuthNetwork: "sapphire_devnet",
+    chainConfig,
     uiConfig: {
       appName: "Payvel",
       mode: "dark",
       loginMethodsOrder: ["google", "email_passwordless", "sms_passwordless"],
     },
     modalConfig: {
-      auth: {
+      [WALLET_ADAPTERS.AUTH]: {
         label: 'auth',
         loginMethods: {
           google: {
             name: 'Continue with Google',
             showOnModal: true,
+            authConnectionId: 'payvel-connection',
           },
           email_passwordless: {
             name: 'Continue with Email',
             showOnModal: true,
+            authConnectionId: 'payvel-email-connection',
           },
           sms_passwordless: {
             name: 'Continue with SMS',
             showOnModal: true,
+            authConnectionId: 'payvel-sms-connection',
           },
         },
       },
@@ -63,7 +67,7 @@ export async function initWeb3Auth() {
   }
 }
 
-async function loginWithProvider(loginProvider?: string, extraLoginOptions?: any) {
+async function loginWithProvider(loginProvider?: string, authConnectionId?: string) {
   try {
     const web3auth = await getWeb3Auth();
     
@@ -71,11 +75,13 @@ async function loginWithProvider(loginProvider?: string, extraLoginOptions?: any
     
     let provider;
     
-    if (loginProvider) {
-      // Explicit login with specific provider
-      provider = await web3auth.connectTo("auth" as any, {
+    if (loginProvider && authConnectionId) {
+      // Explicit login with specific provider and connection ID
+      provider = await web3auth.connectTo(WALLET_ADAPTERS.AUTH as any, {
         loginProvider,
-        extraLoginOptions,
+        extraLoginOptions: {
+          authConnectionId,
+        },
       });
     } else {
       // Open modal with all options
@@ -112,17 +118,15 @@ async function loginWithProvider(loginProvider?: string, extraLoginOptions?: any
 }
 
 export async function loginWithGoogle() {
-  return loginWithProvider("google", {
-    login_hint: "",
-  });
+  return loginWithProvider("google", "payvel-connection");
 }
 
 export async function loginWithEmail() {
-  return loginWithProvider("email_passwordless");
+  return loginWithProvider("email_passwordless", "payvel-email-connection");
 }
 
 export async function loginWithSMS() {
-  return loginWithProvider("sms_passwordless");
+  return loginWithProvider("sms_passwordless", "payvel-sms-connection");
 }
 
 export async function loginWithModal() {
