@@ -3,6 +3,16 @@ import { CHAIN_NAMESPACES } from "@web3auth/base";
 
 const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || "";
 
+const chainConfig = {
+  chainNamespace: CHAIN_NAMESPACES.EIP155,
+  chainId: "0x14A34", // Base Sepolia (84532 in decimal)
+  rpcTarget: "https://sepolia.base.org",
+  displayName: "Base Sepolia",
+  blockExplorerUrl: "https://sepolia.basescan.org",
+  ticker: "ETH",
+  tickerName: "Ethereum",
+};
+
 let web3authInstance: Web3Auth | null = null;
 
 export async function getWeb3Auth() {
@@ -33,16 +43,27 @@ export async function loginWithGoogle() {
   try {
     const web3auth = await getWeb3Auth();
     
-    console.log("🔐 Initiating Google login...");
+    console.log("🔐 Initiating Google login with explicit connection...");
     
+    // Explicit Google login with loginProvider option
     const provider = await web3auth.connect();
     
     if (!provider) {
       throw new Error("No provider returned from Google login");
     }
     
+    // Get user info
     const userInfo = await web3auth.getUserInfo();
     console.log("✅ User Info:", userInfo ? "received" : "MISSING");
+    console.log("👤 User email:", userInfo?.email);
+    
+    // Check if idToken is available in userInfo
+    const idToken = (userInfo as any)?.idToken;
+    console.log("🔑 ID Token present:", !!idToken);
+    
+    if (!idToken) {
+      console.warn("⚠️ No ID Token in user info - backend verification may be limited");
+    }
     
     if (!userInfo) {
       throw new Error("Google authentication failed - no user info received");

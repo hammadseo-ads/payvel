@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isConnected && web3auth.provider) {
         console.log("🔄 Resuming login after redirect...");
         
-        // Verify user info
+        // Get user info
         const userInfo = await web3auth.getUserInfo();
         
         if (!userInfo) {
@@ -51,10 +51,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         
+        console.log("👤 User email:", userInfo.email);
+        
+        // Check for ID token in user info
+        const idToken = (userInfo as any)?.idToken;
+        console.log("🔑 ID Token present:", !!idToken);
+        
+        if (!idToken) {
+          console.warn("⚠️ No ID Token - proceeding without backend verification token");
+        }
+        
         // Initialize smart account
+        console.log("🔧 Initializing smart account...");
         const { smartAccount, saAddress } = await initSimpleSmartAccount();
         setSmartAccount(smartAccount);
         setSmartAccountAddress(saAddress);
+        console.log("✅ Smart account initialized:", saAddress);
         
         // Store user mapping in database
         const { data, error } = await supabase.functions.invoke("account-create", {
