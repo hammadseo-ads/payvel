@@ -57,9 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         console.log("👤 User email:", userInfo.email);
         
-        // Get ID Token using authenticateUser (cast to any for v10 compatibility)
-        const authResult = await (web3auth as any).authenticateUser?.();
-        const idToken = authResult?.idToken;
+        // Get ID Token using getIdentityToken
+        const tokenInfo = await web3auth.getIdentityToken();
+        const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
         console.log("🔑 ID Token present:", !!idToken);
         
         if (!idToken) {

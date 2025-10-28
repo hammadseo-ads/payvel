@@ -1,5 +1,5 @@
 import { Web3Auth } from "@web3auth/modal";
-import { CHAIN_NAMESPACES } from "@web3auth/base";
+import { CHAIN_NAMESPACES, WALLET_ADAPTERS } from "@web3auth/base";
 
 const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || "";
 
@@ -28,7 +28,26 @@ export async function getWeb3Auth() {
       mode: "dark",
       loginMethodsOrder: ["google", "email_passwordless", "sms_passwordless"],
     },
-  });
+    modalConfig: {
+      auth: {
+        label: 'auth',
+        loginMethods: {
+          google: {
+            name: 'Continue with Google',
+            showOnModal: true,
+          },
+          email_passwordless: {
+            name: 'Continue with Email',
+            showOnModal: true,
+          },
+          sms_passwordless: {
+            name: 'Continue with SMS',
+            showOnModal: true,
+          },
+        },
+      },
+    },
+  } as any);
 
   await web3authInstance.init();
   return web3authInstance;
@@ -76,16 +95,16 @@ async function loginWithProvider(loginProvider?: string, extraLoginOptions?: any
       throw new Error("Authentication failed - no user info received");
     }
     
-    // CRITICAL: Get Identity Token using authenticateUser
-    const authResult = await (web3auth as any).authenticateUser?.();
-    const idToken = authResult?.idToken;
+    // Get Identity Token using getIdentityToken
+    const tokenInfo = await web3auth.getIdentityToken();
+    const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
     console.log("🔑 ID Token:", idToken ? "received" : "MISSING");
     
     if (!idToken) {
       throw new Error("Failed to retrieve ID token - authentication incomplete");
     }
     
-    return { provider, idToken: (idToken as string) };
+    return { provider, idToken: idToken as string };
   } catch (error) {
     console.error("❌ Error during login:", error);
     throw error;
