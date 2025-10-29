@@ -38,7 +38,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (web3auth as any).status === "connected" ||
         !!web3auth.provider;
       
-      console.log("🔍 Connection status:", { isConnected, provider: !!web3auth.provider });
+      console.log("🔍 Connection status:", { 
+        isConnected, 
+        provider: !!web3auth.provider,
+        status: (web3auth as any).status 
+      });
+      
+      // If no connection after redirect, log detailed error
+      if (!isConnected) {
+        console.log("⚠️ No active session after redirect");
+        console.log("📦 localStorage keys:", Object.keys(localStorage));
+        setIsLoading(false);
+        return;
+      }
       
       if (isConnected && web3auth.provider) {
         console.log("🔄 Resuming login after redirect...");
@@ -96,7 +108,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setIsLoading(false);
     } catch (error) {
-      console.error("Failed to initialize auth:", error);
+      console.error("❌ Failed to initialize auth:", error);
+      // Log storage access status
+      try {
+        localStorage.setItem('test', 'test');
+        localStorage.removeItem('test');
+        console.log("✅ localStorage is accessible");
+      } catch (storageError) {
+        console.error("❌ localStorage is BLOCKED:", storageError);
+      }
       setIsLoading(false);
     }
   }

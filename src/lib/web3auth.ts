@@ -29,6 +29,7 @@ export async function getWeb3Auth() {
     clientId,
     web3AuthNetwork: "sapphire_devnet",
     chainConfig,
+    uxMode: "redirect",
     uiConfig: {
       appName: "Payvel",
       mode: "dark",
