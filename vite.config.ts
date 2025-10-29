@@ -56,6 +56,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
       process: "process/browser",
+      "process/": "process/browser",
       stream: "stream-browserify",
       util: "util/",
       events: "events/",
@@ -67,8 +68,11 @@ export default defineConfig(({ mode }) => ({
     global: "globalThis",
   },
   optimizeDeps: {
-    exclude: ["process"],
+    exclude: [],
     include: [
+      "process",
+      "readable-stream",
+      "@web3auth/auth",
       "buffer",
       "events",
       "stream-browserify",
