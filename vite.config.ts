@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
         global: true,
         process: true,
       },
+      protocolImports: true,
     }),
     cjsInterop({
       dependencies: [
@@ -64,10 +65,11 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     global: "globalThis",
+    "process.env": "process.env",
   },
   optimizeDeps: {
+    exclude: ["process"],
     include: [
-      "process",
       "buffer",
       "events",
       "stream-browserify",
@@ -103,7 +105,6 @@ export default defineConfig(({ mode }) => ({
       "@toruslabs/openlogin-jrpc",
       "@toruslabs/openlogin-utils",
     ],
-    exclude: [],
     esbuildOptions: {
       define: {
         global: "globalThis",

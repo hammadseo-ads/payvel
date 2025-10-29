@@ -32,16 +32,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const web3auth = await initWeb3Auth();
       
-      // Check if user is already connected (Web3Auth is pre-initialized)
+      // Check if truly connected (not just "connecting")
       const isConnected = 
-        (web3auth as any).connected === true ||
-        (web3auth as any).status === "connected" ||
+        (web3auth as any).connected === true &&
+        (web3auth as any).status === "connected" &&
         !!web3auth.provider;
       
       console.log("🔍 Auth state:", {
-        isConnected,
+        connected: (web3auth as any).connected,
+        status: (web3auth as any).status,
         hasProvider: !!web3auth.provider,
-        status: (web3auth as any).status 
+        isConnected,
       });
       
       if (!isConnected) {
@@ -50,59 +51,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      if (isConnected && web3auth.provider) {
-        console.log("🔄 Resuming login after redirect...");
-        
-        // Get user info
-        const userInfo = await web3auth.getUserInfo();
-        
-        if (!userInfo) {
-          console.warn("⚠️ No user info after resume");
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log("👤 User email:", userInfo.email);
-        
-        // Get ID Token using getIdentityToken
-        const tokenInfo = await web3auth.getIdentityToken();
-        const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
-        console.log("🔑 ID Token present:", !!idToken);
-        
-        if (!idToken) {
-          console.error("❌ No idToken - authentication incomplete");
-          setIsLoading(false);
-          return;
-        }
-        
-        setIdToken(idToken as string);
-        
-        // Initialize smart account
-        console.log("🔧 Initializing smart account...");
-        const { smartAccount, saAddress } = await initSimpleSmartAccount();
-        setSmartAccount(smartAccount);
-        setSmartAccountAddress(saAddress);
-        console.log("✅ Smart account initialized:", saAddress);
-        
-        // Store user mapping in database
-        const { data, error } = await supabase.functions.invoke("account-create", {
-          body: { 
-            smartAccountAddress: saAddress,
-            idToken: idToken,
-          },
-        });
-        
-        if (error) {
-          console.error("Failed to create account mapping:", error);
-        }
-        
-        if (data?.email) {
-          setUserEmail(data.email);
-        }
-        
-        setIsAuthenticated(true);
-        toast.success("Successfully logged in!");
+      // Additional safety: verify accounts exist
+      const accounts = await web3auth.provider.request({ method: "eth_accounts" }) as string[];
+      if (!accounts || accounts.length === 0) {
+        console.log("⚠️ Provider exists but no accounts - session incomplete");
+        setIsLoading(false);
+        return;
       }
+      
+      console.log("🔄 Resuming session with", accounts.length, "account(s)");
+      
+      // Verify chain
+      const chainId = await web3auth.provider.request({ method: "eth_chainId" }) as string;
+      console.log("⛓️ Connected to chain:", chainId, chainId === "0x14A34" ? "✅ Base Sepolia" : "⚠️ WRONG CHAIN");
+      
+      if (chainId !== "0x14A34") {
+        console.warn("⚠️ Provider is on wrong chain. Expected 0x14A34 (Base Sepolia), got", chainId);
+      }
+      
+      // Get user info
+      const userInfo = await web3auth.getUserInfo();
+      
+      if (!userInfo) {
+        console.warn("⚠️ No user info after resume");
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log("👤 User email:", userInfo.email);
+      
+      // Get ID Token using getIdentityToken
+      const tokenInfo = await web3auth.getIdentityToken();
+      const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
+      console.log("🔑 ID Token present:", !!idToken);
+      
+      if (!idToken) {
+        console.error("❌ No idToken - authentication incomplete");
+        setIsLoading(false);
+        return;
+      }
+      
+      setIdToken(idToken as string);
+      
+      // Initialize smart account
+      console.log("🔧 Initializing smart account...");
+      const { smartAccount, saAddress } = await initSimpleSmartAccount();
+      setSmartAccount(smartAccount);
+      setSmartAccountAddress(saAddress);
+      console.log("✅ Smart account initialized:", saAddress);
+      
+      // Store user mapping in database
+      const { data, error } = await supabase.functions.invoke("account-create", {
+        body: { 
+          smartAccountAddress: saAddress,
+          idToken: idToken,
+        },
+      });
+      
+      if (error) {
+        console.error("Failed to create account mapping:", error);
+      }
+      
+      if (data?.email) {
+        setUserEmail(data.email);
+      }
+      
+      setIsAuthenticated(true);
+      toast.success("Successfully logged in!");
       
       setIsLoading(false);
     } catch (error) {

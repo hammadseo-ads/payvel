@@ -28,7 +28,7 @@ export async function bootstrapWeb3Auth() {
     clientId,
     web3AuthNetwork: "sapphire_devnet",
     chainConfig,
-    uxMode: "redirect",
+    uxMode: "popup",
     uiConfig: {
       appName: "Payvel",
       mode: "dark",
