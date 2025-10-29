@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     nodePolyfills({
-      include: ["buffer", "process", "assert", "crypto", "stream", "util"],
+      include: ["buffer", "process", "assert", "crypto", "stream", "util", "events"],
       globals: {
         Buffer: true,
         global: true,
@@ -54,8 +54,12 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
+      process: "process/browser",
+      stream: "stream-browserify",
+      util: "util/",
+      events: "events/",
     },
-    dedupe: ["react", "react-dom", "enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39", "loglevel", "deepmerge", "cipher-base", "randombytes", "base64url", "events"],
+    dedupe: ["react", "react-dom", "enc-utils", "elliptic", "bn.js", "@toruslabs/starkware-crypto", "bip39", "loglevel", "deepmerge", "cipher-base", "randombytes", "base64url", "events", "process", "stream-browserify", "util"],
     conditions: ["module", "import", "browser", "default"],
   },
   define: {
@@ -63,6 +67,11 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: [
+      "process",
+      "buffer",
+      "events",
+      "stream-browserify",
+      "util",
       "react",
       "react-dom",
       "enc-utils",
@@ -86,7 +95,6 @@ export default defineConfig(({ mode }) => ({
       "randombytes",
       "browserify-aes",
       "base64url",
-      "events",
       "@web3auth/no-modal",
       "@web3auth/base",
       "@toruslabs/customauth",

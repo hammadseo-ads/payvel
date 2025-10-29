@@ -1,28 +1,28 @@
+// ============================================
+// CRITICAL: Import polyfills FIRST
+// ============================================
+import processShim from "process/browser";
+import { Buffer } from "buffer";
+import EventEmitter from "events";
+
+// Global assignments (must happen before other imports)
+(globalThis as any).global = globalThis;
+(globalThis as any).Buffer = Buffer;
+(globalThis as any).process = processShim;
+(globalThis as any).EventEmitter = EventEmitter;
+
+console.log("✅ Polyfills loaded:", {
+  hasProcess: !!(globalThis as any).process,
+  hasNextTick: typeof (globalThis as any).process?.nextTick === "function",
+  hasBuffer: !!(globalThis as any).Buffer,
+  hasEventEmitter: typeof EventEmitter === "function",
+});
+
+// NOW import application code
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { Buffer } from "buffer";
 import { bootstrapWeb3Auth } from "./lib/web3auth-bootstrap";
-
-// Polyfill Buffer for Web3Auth - multiple assignments for maximum compatibility
-globalThis.Buffer = Buffer;
-window.Buffer = Buffer;
-
-// Polyfill process.nextTick (critical for Web3Auth)
-if (!window.process) {
-  window.process = { env: {} } as any;
-}
-if (!window.process.nextTick) {
-  window.process.nextTick = function(callback: Function, ...args: any[]) {
-    setTimeout(() => callback(...args), 0);
-  };
-}
-
-console.log("✅ Polyfills loaded:", {
-  hasBuffer: !!window.Buffer,
-  hasProcess: !!window.process,
-  hasNextTick: !!(window.process && window.process.nextTick)
-});
 
 // Initialize Web3Auth BEFORE React mounts
 bootstrapWeb3Auth()
