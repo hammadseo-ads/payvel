@@ -12,8 +12,10 @@ export async function initSimpleSmartAccount() {
     const provider = instance.provider;
     
     if (!provider) {
-      throw new Error("No provider available from Web3Auth");
+      throw new Error("❌ Provider not available – user must login first");
     }
+
+    console.log("✅ Provider available, creating wallet client...");
 
     // Create wallet client from Web3Auth provider
     const walletClient = await getWalletClientFromProvider(provider);

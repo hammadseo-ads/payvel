@@ -11,6 +11,13 @@ import EventEmitter from "events";
 (globalThis as any).process = processShim;
 (globalThis as any).EventEmitter = EventEmitter;
 
+// Ensure nextTick is truly present with microtask fallback
+if (typeof (globalThis as any).process.nextTick !== "function") {
+  console.warn("⚠️ nextTick missing, adding microtask polyfill");
+  (globalThis as any).process.nextTick = (cb: Function, ...args: any[]) =>
+    Promise.resolve().then(() => cb(...args));
+}
+
 console.log("✅ Polyfills loaded:", {
   hasProcess: !!(globalThis as any).process,
   hasNextTick: typeof (globalThis as any).process?.nextTick === "function",
