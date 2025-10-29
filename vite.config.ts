@@ -12,7 +12,6 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [
-    react(),
     nodePolyfills({
       include: ["buffer", "process", "assert", "crypto", "stream", "util", "events"],
       globals: {
@@ -22,6 +21,7 @@ export default defineConfig(({ mode }) => ({
       },
       protocolImports: true,
     }),
+    react(),
     cjsInterop({
       dependencies: [
         "enc-utils",
@@ -65,7 +65,7 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     global: "globalThis",
-    "process.env": "process.env",
+    "process.env": "({})",
   },
   optimizeDeps: {
     exclude: ["process"],
