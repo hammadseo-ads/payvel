@@ -32,47 +32,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const web3auth = await initWeb3Auth();
       
-      // Check if user returned from redirect
-      let isConnected = 
+      // Check if user is already connected (Web3Auth is pre-initialized)
+      const isConnected = 
         (web3auth as any).connected === true ||
         (web3auth as any).status === "connected" ||
         !!web3auth.provider;
       
-      console.log("🔍 Connection status:", { 
-        isConnected, 
-        provider: !!web3auth.provider,
+      console.log("🔍 Auth state:", {
+        isConnected,
+        hasProvider: !!web3auth.provider,
         status: (web3auth as any).status 
       });
       
-      // Log Web3Auth state for debugging
-      const web3authState = localStorage.getItem('Web3Auth-state');
-      if (web3authState) {
-        console.log("📦 Web3Auth-state:", JSON.parse(web3authState));
-      }
-      
-      // If no connection after redirect, try authenticateUser() as fallback
       if (!isConnected) {
-        console.log("⚠️ No active session detected, trying authenticateUser()...");
-        try {
-          const authResult = await (web3auth as any).authenticateUser();
-          console.log("🔑 authenticateUser() result:", authResult ? "received" : "null");
-          
-          if (authResult && web3auth.provider) {
-            console.log("✅ Session restored via authenticateUser()");
-            // Continue with normal flow below
-            isConnected = true;
-          } else {
-            console.log("❌ No session found");
-            console.log("📦 localStorage keys:", Object.keys(localStorage));
-            setIsLoading(false);
-            return;
-          }
-        } catch (authError) {
-          console.error("❌ authenticateUser() failed:", authError);
-          console.log("📦 localStorage keys:", Object.keys(localStorage));
-          setIsLoading(false);
-          return;
-        }
+        console.log("⚠️ No active session detected");
+        setIsLoading(false);
+        return;
       }
       
       if (isConnected && web3auth.provider) {
