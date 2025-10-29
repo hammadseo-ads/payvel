@@ -84,7 +84,14 @@ async function loginWithModal() {
     
     console.log('🔐 Opening login modal with all options...');
     
-    // Open modal with all options
+    // Clear any stale Web3Auth session data to prevent chain mismatch
+    const keysToRemove = Object.keys(localStorage).filter(key => 
+      key.startsWith('Web3Auth') || key.startsWith('openlogin')
+    );
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log('🧹 Cleared stale session data:', keysToRemove.length, 'keys');
+    
+    // Open modal with explicit redirect URL
     const provider = await web3auth.connect();
     
     if (!provider) {

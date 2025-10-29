@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const web3auth = await initWeb3Auth();
       
       // Check if user returned from redirect
-      const isConnected = 
+      let isConnected = 
         (web3auth as any).connected === true ||
         (web3auth as any).status === "connected" ||
         !!web3auth.provider;
@@ -44,12 +44,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         status: (web3auth as any).status 
       });
       
-      // If no connection after redirect, log detailed error
+      // Log Web3Auth state for debugging
+      const web3authState = localStorage.getItem('Web3Auth-state');
+      if (web3authState) {
+        console.log("📦 Web3Auth-state:", JSON.parse(web3authState));
+      }
+      
+      // If no connection after redirect, try authenticateUser() as fallback
       if (!isConnected) {
-        console.log("⚠️ No active session after redirect");
-        console.log("📦 localStorage keys:", Object.keys(localStorage));
-        setIsLoading(false);
-        return;
+        console.log("⚠️ No active session detected, trying authenticateUser()...");
+        try {
+          const authResult = await (web3auth as any).authenticateUser();
+          console.log("🔑 authenticateUser() result:", authResult ? "received" : "null");
+          
+          if (authResult && web3auth.provider) {
+            console.log("✅ Session restored via authenticateUser()");
+            // Continue with normal flow below
+            isConnected = true;
+          } else {
+            console.log("❌ No session found");
+            console.log("📦 localStorage keys:", Object.keys(localStorage));
+            setIsLoading(false);
+            return;
+          }
+        } catch (authError) {
+          console.error("❌ authenticateUser() failed:", authError);
+          console.log("📦 localStorage keys:", Object.keys(localStorage));
+          setIsLoading(false);
+          return;
+        }
       }
       
       if (isConnected && web3auth.provider) {
