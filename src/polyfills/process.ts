@@ -23,12 +23,20 @@ if (typeof globalThis !== 'undefined') {
   (globalThis as any).process = process;
 }
 
-// Make nextTick immutable on the process object itself
-Object.defineProperty(process, 'nextTick', {
-  value: nextTickImpl,
-  writable: false,
-  configurable: false,
-  enumerable: true
-});
+// Only make nextTick immutable if it's configurable or doesn't exist yet
+const descriptor = Object.getOwnPropertyDescriptor(process, 'nextTick');
+if (!descriptor || descriptor.configurable) {
+  try {
+    Object.defineProperty(process, 'nextTick', {
+      value: process.nextTick || nextTickImpl,
+      writable: false,
+      configurable: false,
+      enumerable: true
+    });
+  } catch (e) {
+    // If we can't make it immutable, that's okay - it's already there
+    console.debug('process.nextTick already defined and non-configurable');
+  }
+}
 
 export default process;
