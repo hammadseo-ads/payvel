@@ -14,13 +14,34 @@ if (!process.nextTick) {
   process.nextTick = nextTickImpl;
 }
 
-// Also set it on window and globalThis for good measure
+// AGGRESSIVELY inject into window and globalThis with non-writable descriptors
+// This ensures all bundles (including Web3Auth) use the same process instance
 if (typeof window !== 'undefined') {
-  (window as any).process = process;
+  try {
+    Object.defineProperty(window, 'process', {
+      value: process,
+      writable: false,
+      configurable: false,
+      enumerable: true
+    });
+  } catch (e) {
+    // If already defined, use fallback assignment
+    (window as any).process = process;
+  }
 }
 
 if (typeof globalThis !== 'undefined') {
-  (globalThis as any).process = process;
+  try {
+    Object.defineProperty(globalThis, 'process', {
+      value: process,
+      writable: false,
+      configurable: false,
+      enumerable: true
+    });
+  } catch (e) {
+    // If already defined, use fallback assignment
+    (globalThis as any).process = process;
+  }
 }
 
 // Only make nextTick immutable if it's configurable or doesn't exist yet
