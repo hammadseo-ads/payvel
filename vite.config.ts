@@ -59,7 +59,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       buffer: "buffer/",
-      process: "process/browser",
+      process: path.resolve(__dirname, "./src/polyfills/process.ts"),
       "process/": "process/browser",
       stream: "stream-browserify",
       util: "util/",
@@ -117,6 +117,7 @@ export default defineConfig(({ mode }) => ({
         global: "globalThis",
         "process.nextTick": "globalThis.process.nextTick",
       },
+      inject: [path.resolve(__dirname, "./src/polyfills/process.ts")],
     },
   },
   build: {

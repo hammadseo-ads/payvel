@@ -1,6 +1,8 @@
 // ============================================
 // CRITICAL: Import polyfills FIRST
 // ============================================
+// MUST be first import - sets up process.nextTick for all modules
+import './polyfills/process';
 import processShim from "process/browser";
 import { Buffer } from "buffer";
 import EventEmitter from "events";
