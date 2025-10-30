@@ -57,7 +57,6 @@ export default defineConfig(({ mode }) => ({
       buffer: "buffer/",
       process: path.resolve(__dirname, "./src/polyfills/process.ts"),
       "process/": "process/browser",
-      "readable-stream": "stream-browserify",
       stream: "stream-browserify",
       util: "util/",
       events: "events/",
