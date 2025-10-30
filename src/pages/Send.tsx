@@ -50,6 +50,26 @@ const Send = () => {
         throw new Error("Authentication failed. Please log in again.");
       }
 
+      // Check balance before sending
+      const { data: balanceData, error: balanceError } = await supabase.functions.invoke("balance-fetch", {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (balanceError) {
+        throw new Error("Failed to check balance");
+      }
+
+      const currentBalance = parseFloat(balanceData.balance);
+      const sendAmount = parseFloat(amount);
+
+      if (currentBalance < sendAmount) {
+        toast.error(`Insufficient balance. You have ${currentBalance.toFixed(4)} ETH`);
+        setIsSubmitting(false);
+        return;
+      }
+
       // Submit via backend for policy checks
       const { data, error } = await supabase.functions.invoke("tx-submit", {
         body: {

@@ -1,15 +1,17 @@
 import { Copy, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { shortenAddress } from "@/lib/biconomy";
 import { toast } from "sonner";
 
 interface WalletCardProps {
   address: string;
   balance?: string;
+  isLoading?: boolean;
 }
 
-export function WalletCard({ address, balance = "0.00" }: WalletCardProps) {
+export function WalletCard({ address, balance = "0.00", isLoading = false }: WalletCardProps) {
   const copyAddress = () => {
     navigator.clipboard.writeText(address);
     toast.success("Address copied to clipboard");
@@ -30,7 +32,13 @@ export function WalletCard({ address, balance = "0.00" }: WalletCardProps) {
         </div>
 
         <div className="space-y-2">
-          <div className="text-3xl font-bold">{balance} ETH</div>
+          <div className="text-3xl font-bold">
+            {isLoading ? (
+              <Skeleton className="h-10 w-32" />
+            ) : (
+              `${balance} ETH`
+            )}
+          </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{shortenAddress(address)}</span>
             <Button

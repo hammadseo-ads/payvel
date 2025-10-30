@@ -14,6 +14,8 @@ const Dashboard = () => {
   const { isAuthenticated, isLoading, smartAccountAddress } = useAuth();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
+  const [balance, setBalance] = useState<string>("0.00");
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -24,6 +26,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (smartAccountAddress) {
       loadTransactions();
+      fetchBalance();
     }
   }, [smartAccountAddress]);
 
@@ -57,6 +60,38 @@ const Dashboard = () => {
     }
   }
 
+  async function fetchBalance() {
+    setIsLoadingBalance(true);
+    try {
+      const web3auth = await getWeb3Auth();
+      const tokenInfo = await web3auth.getIdentityToken();
+      const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
+      
+      if (!idToken) {
+        console.error("No ID token available");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("balance-fetch", {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.balance) {
+        setBalance(data.balance);
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch balance:", error);
+      toast.error("Failed to load balance");
+      setBalance("0.00");
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  }
+
   if (isLoading || !smartAccountAddress) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -79,7 +114,11 @@ const Dashboard = () => {
             <p className="text-muted-foreground">Manage your wallet and transactions</p>
           </div>
 
-          <WalletCard address={smartAccountAddress} />
+          <WalletCard 
+            address={smartAccountAddress} 
+            balance={balance}
+            isLoading={isLoadingBalance}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <Button
