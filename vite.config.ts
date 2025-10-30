@@ -62,7 +62,6 @@ export default defineConfig(({ mode }) => ({
       process: "process/browser",
       "process/": "process/browser",
       stream: "stream-browserify",
-      "readable-stream": "stream-browserify",
       util: "util/",
       events: "events/",
     },
