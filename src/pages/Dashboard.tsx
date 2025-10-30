@@ -7,6 +7,8 @@ import { Header } from "@/components/Header";
 import { WalletCard } from "@/components/WalletCard";
 import { TransactionList } from "@/components/TransactionList";
 import { supabase } from "@/integrations/supabase/client";
+import { getWeb3Auth } from "@/lib/web3auth";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const { isAuthenticated, isLoading, smartAccountAddress } = useAuth();
@@ -27,15 +29,31 @@ const Dashboard = () => {
 
   async function loadTransactions() {
     try {
-      const { data, error } = await supabase.functions.invoke("tx-list");
+      // Get ID token for authentication
+      const web3auth = await getWeb3Auth();
+      const tokenInfo = await web3auth.getIdentityToken();
+      const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
+      
+      if (!idToken) {
+        console.error("No ID token available");
+        toast.error("Authentication failed. Please log in again.");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("tx-list", {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
       
       if (error) throw error;
       
       if (data?.transactions) {
         setTransactions(data.transactions);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load transactions:", error);
+      toast.error("Failed to load transactions");
     }
   }
 

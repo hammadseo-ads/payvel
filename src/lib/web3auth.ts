@@ -83,10 +83,44 @@ export async function login() {
 
 export async function logout() {
   try {
+    console.log("🚪 Starting logout process...");
+    
+    // 1. Logout from Web3Auth
     const web3auth = await getWeb3Auth();
     await web3auth.logout();
+    console.log("✅ Web3Auth logged out");
+    
+    // 2. Clear ALL Web3Auth-related localStorage
+    const keysToRemove = Object.keys(localStorage).filter(key => 
+      key.startsWith("Web3Auth") || 
+      key.startsWith("openlogin") ||
+      key.startsWith("@w3a") ||
+      key === "w3a-user"
+    );
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log("🧹 Removed localStorage key:", key);
+    });
+    
+    // 3. Clear sessionStorage
+    sessionStorage.clear();
+    console.log("🧹 Cleared sessionStorage");
+    
+    console.log("✅ Logout cleanup complete");
   } catch (error) {
-    console.error("Error logging out:", error);
+    console.error("❌ Error during logout:", error);
+    
+    // Force cleanup even if web3auth.logout() fails
+    const keysToRemove = Object.keys(localStorage).filter(key => 
+      key.startsWith("Web3Auth") || 
+      key.startsWith("openlogin") ||
+      key.startsWith("@w3a") ||
+      key === "w3a-user"
+    );
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    sessionStorage.clear();
+    
     throw error;
   }
 }

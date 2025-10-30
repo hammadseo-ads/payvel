@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getWeb3Auth } from "@/lib/web3auth";
 
 const Send = () => {
   const { smartAccount } = useAuth();
@@ -40,12 +41,24 @@ const Send = () => {
     setIsSubmitting(true);
 
     try {
+      // Get ID token for authentication
+      const web3auth = await getWeb3Auth();
+      const tokenInfo = await web3auth.getIdentityToken();
+      const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
+      
+      if (!idToken) {
+        throw new Error("Authentication failed. Please log in again.");
+      }
+
       // Submit via backend for policy checks
       const { data, error } = await supabase.functions.invoke("tx-submit", {
         body: {
           to: recipient,
           amount,
-          chainId: import.meta.env.VITE_CHAIN_ID,
+          chainId: "84532", // Base Sepolia
+        },
+        headers: {
+          Authorization: `Bearer ${idToken}`,
         },
       });
 

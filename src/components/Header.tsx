@@ -8,8 +8,13 @@ export function Header() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/");
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      // Error already handled in AuthContext, just navigate
+      navigate("/");
+    }
   };
 
   return (

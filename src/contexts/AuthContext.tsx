@@ -170,8 +170,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(true);
       toast.success("Successfully logged in!");
     } catch (error: any) {
-      console.error("Login failed:", error);
-      toast.error(error.message || "Failed to login");
+      console.error("❌ Login failed:", error);
+      
+      // User-friendly error messages
+      if (error.message?.includes("User closed modal")) {
+        toast.error("Login cancelled");
+      } else if (error.message?.includes("localStorage") || error.message?.includes("storage")) {
+        toast.error("Please enable cookies and local storage");
+      } else if (error.message?.includes("No provider")) {
+        toast.error("Failed to connect wallet");
+      } else {
+        toast.error(error.message || "Failed to login. Please try again.");
+      }
+      
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
@@ -180,16 +191,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function logout() {
     try {
+      console.log("🚪 Logging out from AuthContext...");
+      
+      // 1. Call Web3Auth logout (includes localStorage cleanup)
       await web3Logout();
+      
+      // 2. Reset all React state
       setIsAuthenticated(false);
       setSmartAccountAddress(null);
       setUserEmail(null);
       setSmartAccount(null);
       setIdToken(null);
+      
+      console.log("✅ AuthContext state cleared");
       toast.success("Successfully logged out");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      toast.error("Failed to logout");
+    } catch (error: any) {
+      console.error("❌ Logout error:", error);
+      
+      // Force state reset even if logout fails
+      setIsAuthenticated(false);
+      setSmartAccountAddress(null);
+      setUserEmail(null);
+      setSmartAccount(null);
+      setIdToken(null);
+      
+      // Still show success to user (they're logged out from UI perspective)
+      toast.success("Logged out");
     }
   }
 
