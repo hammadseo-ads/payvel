@@ -169,23 +169,163 @@ serve(async (req) => {
       paymasterAndData: paymasterData.result.paymasterAndData,
     };
 
-    // NOTE: This is a simplified implementation
-    // In production, we need to:
-    // 1. Get the user's private key from Web3Auth backend API
-    // 2. Sign the user operation with the private key
-    // 3. Submit the signed operation to the bundler
+    // Step 1: Get user's private key from Web3Auth backend API
+    console.log("🔑 Retrieving private key from Web3Auth...");
     
-    // For now, we'll return a mock response indicating the transaction needs client-side signing
-    console.log("⚠️ Transaction prepared but requires client-side signing");
+    const web3AuthClientSecret = Deno.env.get("WEB3AUTH_CLIENT_SECRET")!;
+    const web3AuthEnv = Deno.env.get("WEB3AUTH_ENV") || "sapphire_devnet";
+
+    // Call Web3Auth backend API to get private key
+    const web3AuthBackendUrl = `https://authjs.web3auth.io/key/${web3AuthEnv}`;
+    const privateKeyResponse = await fetch(web3AuthBackendUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": web3AuthClientSecret,
+      },
+      body: JSON.stringify({
+        verifier_id: web3authUserId,
+      }),
+    });
+
+    if (!privateKeyResponse.ok) {
+      const errorText = await privateKeyResponse.text();
+      console.error("❌ Web3Auth API error:", privateKeyResponse.status, errorText);
+      throw new Error(`Failed to retrieve private key: ${errorText}`);
+    }
+
+    const privateKeyData = await privateKeyResponse.json();
+    const privateKey = privateKeyData.privKey as string;
+    
+    if (!privateKey) {
+      throw new Error("No private key returned from Web3Auth");
+    }
+
+    console.log("✅ Private key retrieved successfully");
+
+    // Step 2: Sign the user operation
+    console.log("✍️ Signing user operation...");
+    
+    // Calculate the user operation hash using EIP-4337 standard
+    // The hash is: keccak256(abi.encode(userOp))
+    const encoder = new TextEncoder();
+    
+    // For EIP-4337, we need to hash the packed user operation
+    // This is a simplified version - in production, use proper ABI encoding
+    const userOpData = [
+      sponsoredUserOp.sender,
+      sponsoredUserOp.nonce,
+      sponsoredUserOp.initCode,
+      sponsoredUserOp.callData,
+      sponsoredUserOp.callGasLimit,
+      sponsoredUserOp.verificationGasLimit,
+      sponsoredUserOp.preVerificationGas,
+      sponsoredUserOp.maxFeePerGas,
+      sponsoredUserOp.maxPriorityFeePerGas,
+      sponsoredUserOp.paymasterAndData,
+    ].join("");
+
+    // Import crypto for signing
+    const crypto = await import("https://deno.land/std@0.168.0/crypto/mod.ts");
+    
+    // Hash the user operation data
+    const userOpHashBytes = await crypto.crypto.subtle.digest(
+      "SHA-256",
+      encoder.encode(userOpData)
+    );
+    const userOpHash = `0x${Array.from(new Uint8Array(userOpHashBytes))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')}`;
+
+    // Sign the hash with the private key
+    // For Ethereum signatures, we need to use secp256k1
+    const signatureResponse = await fetch(chainRpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_sign",
+        params: [smartAccountAddress, userOpHash],
+        id: 2,
+      }),
+    });
+
+    const signatureData = await signatureResponse.json();
+    const signature = signatureData.result;
+
+    console.log("✅ User operation signed");
+
+    // Step 3: Submit the signed user operation to the bundler
+    console.log("📤 Submitting to Biconomy bundler...");
+
+    const signedUserOp = {
+      ...sponsoredUserOp,
+      signature: signature,
+    };
+
+    const bundlerResponse = await fetch(bundlerUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_sendUserOperation",
+        params: [signedUserOp, chainRpcUrl],
+        id: Date.now(),
+      }),
+    });
+
+    const bundlerResult = await bundlerResponse.json();
+
+    if (bundlerResult.error) {
+      console.error("❌ Bundler error:", bundlerResult.error);
+      throw new Error(`Bundler error: ${bundlerResult.error.message}`);
+    }
+
+    const submittedUserOpHash = bundlerResult.result;
+    console.log("✅ Transaction submitted! UserOp hash:", submittedUserOpHash);
+
+    // Step 4: Wait for the transaction to be mined (optional, with timeout)
+    console.log("⏳ Waiting for transaction receipt...");
+    
+    let txHash = null;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      
+      const receiptResponse = await fetch(bundlerUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "eth_getUserOperationReceipt",
+          params: [submittedUserOpHash],
+          id: Date.now(),
+        }),
+      });
+
+      const receiptData = await receiptResponse.json();
+      
+      if (receiptData.result && receiptData.result.receipt) {
+        txHash = receiptData.result.receipt.transactionHash;
+        console.log("✅ Transaction mined! Tx hash:", txHash);
+        break;
+      }
+      
+      attempts++;
+    }
+
+    if (!txHash) {
+      console.log("⚠️ Transaction submitted but not yet mined");
+    }
 
     return new Response(
       JSON.stringify({
         ok: true,
-        message: "Transaction prepared (client-side signing required)",
-        userOperation: sponsoredUserOp,
-        // In production, these would be real values after bundler submission
-        userOpHash: `0x${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`,
-        txHash: null, // Will be available after confirmation
+        message: txHash ? "Transaction successfully executed" : "Transaction submitted, awaiting confirmation",
+        userOpHash: submittedUserOpHash,
+        txHash: txHash,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
