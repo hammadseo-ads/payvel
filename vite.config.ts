@@ -20,10 +20,6 @@ export default defineConfig(({ mode }) => ({
         process: true,
       },
       protocolImports: true,
-      overrides: {
-        // Force readable-stream to use our process polyfill
-        process: 'process/browser',
-      },
     }),
     react(),
     cjsInterop({
@@ -61,6 +57,7 @@ export default defineConfig(({ mode }) => ({
       buffer: "buffer/",
       process: path.resolve(__dirname, "./src/polyfills/process.ts"),
       "process/": "process/browser",
+      "readable-stream": "stream-browserify",
       stream: "stream-browserify",
       util: "util/",
       events: "events/",
@@ -70,12 +67,16 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     global: "globalThis",
+    "process.nextTick": "(function(cb, ...args) { Promise.resolve().then(() => cb(...args)); })",
   },
   optimizeDeps: {
     exclude: [],
     include: [
       "process",
       "readable-stream",
+      "readable-stream/lib/_stream_readable",
+      "readable-stream/lib/_stream_writable",
+      "readable-stream/lib/_stream_duplex",
       "@web3auth/auth",
       "buffer",
       "events",
@@ -115,7 +116,7 @@ export default defineConfig(({ mode }) => ({
     esbuildOptions: {
       define: {
         global: "globalThis",
-        "process.nextTick": "globalThis.process.nextTick",
+        "process.nextTick": "(function(cb, ...args) { Promise.resolve().then(() => cb(...args)); })",
       },
       inject: [path.resolve(__dirname, "./src/polyfills/process.ts")],
     },
