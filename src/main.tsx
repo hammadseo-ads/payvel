@@ -1,44 +1,10 @@
-// ============================================
-// CRITICAL: Import polyfills FIRST
-// ============================================
+// Minimal polyfill imports
 import './polyfills/process';
 import { Buffer } from "buffer";
-import EventEmitter from "events";
 
-// Global assignments
+// Basic global assignments
 (globalThis as any).global = globalThis;
 (globalThis as any).Buffer = Buffer;
-(globalThis as any).EventEmitter = EventEmitter;
-
-// Ensure nextTick is truly present with microtask fallback
-if (typeof (globalThis as any).process.nextTick !== "function") {
-  console.warn("⚠️ nextTick missing, adding microtask polyfill");
-  (globalThis as any).process.nextTick = (cb: Function, ...args: any[]) =>
-    Promise.resolve().then(() => cb(...args));
-}
-
-console.log("✅ Polyfills loaded:", {
-  hasProcess: !!(globalThis as any).process,
-  hasNextTick: typeof (globalThis as any).process?.nextTick === "function",
-  hasBuffer: !!(globalThis as any).Buffer,
-  hasEventEmitter: typeof EventEmitter === "function",
-});
-
-// CRITICAL: Verify process.nextTick before proceeding
-if (typeof (globalThis as any).process?.nextTick !== "function") {
-  console.error("❌ CRITICAL: process.nextTick still not available!");
-  alert("App initialization error. Please refresh the page.");
-  throw new Error("process.nextTick polyfill failed");
-}
-
-// Test that it actually works
-try {
-  (globalThis as any).process.nextTick(() => {
-    console.log("✅ process.nextTick test successful");
-  });
-} catch (error) {
-  console.error("❌ process.nextTick test failed:", error);
-}
 
 // NOW import application code
 import { createRoot } from "react-dom/client";

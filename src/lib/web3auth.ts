@@ -15,11 +15,11 @@ export async function initWeb3Auth() {
   }
 }
 
-async function loginWithProvider(authConnection: string, authConnectionId: string) {
+async function loginWithProvider(authConnection: string, authConnectionId: string, extraLoginOptions?: any) {
   try {
     const web3auth = await getWeb3Auth();
     
-    console.log('🔐 Logging in with connection:', authConnectionId);
+    console.log('🔐 Logging in with provider:', authConnectionId);
     
     // Clear stale session data
     const keysToRemove = Object.keys(localStorage).filter(key => 
@@ -28,10 +28,11 @@ async function loginWithProvider(authConnection: string, authConnectionId: strin
     keysToRemove.forEach(key => localStorage.removeItem(key));
     console.log('🧹 Cleared stale session data:', keysToRemove.length, 'keys');
     
-    // V10 API - Connect using AUTH connector
+    // V10 API - Connect using AUTH connector with extraLoginOptions
     const provider = await web3auth.connectTo(WALLET_CONNECTORS.AUTH, {
       authConnection,
       authConnectionId,
+      extraLoginOptions,
     });
     
     if (!provider) {
@@ -85,12 +86,20 @@ export async function loginWithGoogle() {
   return loginWithProvider(AUTH_CONNECTION.GOOGLE, "payvel-connection");
 }
 
-export async function loginWithEmail() {
-  return loginWithProvider(AUTH_CONNECTION.EMAIL_PASSWORDLESS, "payvel-email-connection");
+export async function loginWithEmail(email: string) {
+  return loginWithProvider(
+    AUTH_CONNECTION.EMAIL_PASSWORDLESS, 
+    "payvel-email-connection",
+    { login_hint: email }
+  );
 }
 
-export async function loginWithSMS() {
-  return loginWithProvider(AUTH_CONNECTION.SMS_PASSWORDLESS, "payvel-sms-connection");
+export async function loginWithSMS(phone: string) {
+  return loginWithProvider(
+    AUTH_CONNECTION.SMS_PASSWORDLESS, 
+    "payvel-sms-connection",
+    { login_hint: phone }
+  );
 }
 
 // Default login uses Google

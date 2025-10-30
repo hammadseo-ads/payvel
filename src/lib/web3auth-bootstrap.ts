@@ -1,5 +1,4 @@
 import { Web3Auth, WALLET_CONNECTORS, AUTH_CONNECTION } from "@web3auth/modal";
-import { CHAIN_NAMESPACES } from "@web3auth/base";
 
 const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || "";
 

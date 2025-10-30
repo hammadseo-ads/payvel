@@ -3,6 +3,15 @@ import { Loader2, Mail, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { loginWithGoogle, loginWithEmail, loginWithSMS } from "@/lib/web3auth";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Web3AuthButtonsProps {
   onSuccess?: () => void;
@@ -11,23 +20,24 @@ interface Web3AuthButtonsProps {
 export const Web3AuthButtons = ({ onSuccess }: Web3AuthButtonsProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showSMSDialog, setShowSMSDialog] = useState(false);
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const { toast } = useToast();
 
-  const handleLogin = async (
-    loginFn: () => Promise<any>,
-    providerName: string
-  ) => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
-    setLoadingProvider(providerName);
+    setLoadingProvider("Google");
     
     try {
-      await loginFn();
+      await loginWithGoogle();
       onSuccess?.();
     } catch (error: any) {
-      console.error(`Error logging in with ${providerName}:`, error);
+      console.error("Error logging in with Google:", error);
       toast({
         title: "Login Failed",
-        description: error?.message || `Failed to login with ${providerName}`,
+        description: error?.message || "Failed to login with Google",
         variant: "destructive",
       });
     } finally {
@@ -36,14 +46,77 @@ export const Web3AuthButtons = ({ onSuccess }: Web3AuthButtonsProps) => {
     }
   };
 
+  const handleEmailLogin = async () => {
+    if (!email || !email.includes("@")) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingProvider("Email");
+    setShowEmailDialog(false);
+    
+    try {
+      await loginWithEmail(email);
+      onSuccess?.();
+    } catch (error: any) {
+      console.error("Error logging in with Email:", error);
+      toast({
+        title: "Login Failed",
+        description: error?.message || "Failed to login with Email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setLoadingProvider(null);
+      setEmail("");
+    }
+  };
+
+  const handleSMSLogin = async () => {
+    if (!phone || phone.length < 10) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid phone number with country code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingProvider("SMS");
+    setShowSMSDialog(false);
+    
+    try {
+      await loginWithSMS(phone);
+      onSuccess?.();
+    } catch (error: any) {
+      console.error("Error logging in with SMS:", error);
+      toast({
+        title: "Login Failed",
+        description: error?.message || "Failed to login with SMS",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setLoadingProvider(null);
+      setPhone("");
+    }
+  };
+
   return (
-    <div className="w-full space-y-3">
-      <Button
-        size="lg"
-        onClick={() => handleLogin(loginWithGoogle, "Google")}
-        disabled={isLoading}
-        className="w-full h-14 text-base font-semibold"
-      >
+    <>
+      <div className="w-full space-y-3">
+        <Button
+          size="lg"
+          onClick={handleGoogleLogin}
+          disabled={isLoading}
+          className="w-full h-14 text-base font-semibold"
+        >
         {loadingProvider === "Google" ? (
           <>
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -74,13 +147,13 @@ export const Web3AuthButtons = ({ onSuccess }: Web3AuthButtonsProps) => {
         )}
       </Button>
 
-      <Button
-        size="lg"
-        variant="outline"
-        onClick={() => handleLogin(loginWithEmail, "Email")}
-        disabled={isLoading}
-        className="w-full h-14 text-base font-semibold"
-      >
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={() => setShowEmailDialog(true)}
+          disabled={isLoading}
+          className="w-full h-14 text-base font-semibold"
+        >
         {loadingProvider === "Email" ? (
           <>
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -94,13 +167,13 @@ export const Web3AuthButtons = ({ onSuccess }: Web3AuthButtonsProps) => {
         )}
       </Button>
 
-      <Button
-        size="lg"
-        variant="outline"
-        onClick={() => handleLogin(loginWithSMS, "SMS")}
-        disabled={isLoading}
-        className="w-full h-14 text-base font-semibold"
-      >
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={() => setShowSMSDialog(true)}
+          disabled={isLoading}
+          className="w-full h-14 text-base font-semibold"
+        >
         {loadingProvider === "SMS" ? (
           <>
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -112,7 +185,64 @@ export const Web3AuthButtons = ({ onSuccess }: Web3AuthButtonsProps) => {
             Continue with SMS
           </>
         )}
-      </Button>
-    </div>
+        </Button>
+      </div>
+
+      {/* Email Input Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Continue with Email</DialogTitle>
+            <DialogDescription>
+              Enter your email address to receive a login code
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleEmailLogin()}
+              />
+            </div>
+            <Button onClick={handleEmailLogin} className="w-full">
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* SMS Input Dialog */}
+      <Dialog open={showSMSDialog} onOpenChange={setShowSMSDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Continue with SMS</DialogTitle>
+            <DialogDescription>
+              Enter your phone number with country code (e.g., +1234567890)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+1234567890"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSMSLogin()}
+              />
+            </div>
+            <Button onClick={handleSMSLogin} className="w-full">
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
