@@ -67,7 +67,6 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     global: "globalThis",
-    "process.nextTick": "(function(cb, ...args) { Promise.resolve().then(() => cb(...args)); })",
   },
   optimizeDeps: {
     exclude: [],
@@ -116,7 +115,6 @@ export default defineConfig(({ mode }) => ({
     esbuildOptions: {
       define: {
         global: "globalThis",
-        "process.nextTick": "(function(cb, ...args) { Promise.resolve().then(() => cb(...args)); })",
       },
       inject: [path.resolve(__dirname, "./src/polyfills/process.ts")],
     },
