@@ -19,8 +19,47 @@
 
   <body>
     <script>
-      // Early Buffer polyfill - ensures Buffer is available before any module loads
+      // Ultra-early polyfill - must run before ANY module loads
       window.global = window;
+      
+      // Create robust process object with nextTick
+      if (!window.process) {
+        window.process = {
+          env: {},
+          version: 'v16.0.0',
+          nextTick: function(callback) {
+            if (typeof callback !== 'function') {
+              throw new TypeError('Callback must be a function');
+            }
+            var args = Array.prototype.slice.call(arguments, 1);
+            Promise.resolve().then(function() {
+              callback.apply(null, args);
+            });
+          }
+        };
+      } else if (!window.process.nextTick) {
+        window.process.nextTick = function(callback) {
+          if (typeof callback !== 'function') {
+            throw new TypeError('Callback must be a function');
+          }
+          var args = Array.prototype.slice.call(arguments, 1);
+          Promise.resolve().then(function() {
+            callback.apply(null, args);
+          });
+        };
+      }
+      
+      // Make it immutable to prevent overwrites
+      Object.defineProperty(window, 'process', {
+        value: window.process,
+        writable: false,
+        configurable: false
+      });
+      
+      console.log('🔧 Ultra-early polyfill loaded:', {
+        hasProcess: !!window.process,
+        hasNextTick: typeof window.process.nextTick === 'function'
+      });
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

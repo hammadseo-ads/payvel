@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => ({
         process: true,
       },
       protocolImports: true,
+      overrides: {
+        // Force readable-stream to use our process polyfill
+        process: 'process/browser',
+      },
     }),
     react(),
     cjsInterop({
@@ -58,6 +62,7 @@ export default defineConfig(({ mode }) => ({
       process: "process/browser",
       "process/": "process/browser",
       stream: "stream-browserify",
+      "readable-stream": "stream-browserify",
       util: "util/",
       events: "events/",
     },
@@ -111,6 +116,7 @@ export default defineConfig(({ mode }) => ({
     esbuildOptions: {
       define: {
         global: "globalThis",
+        "process.nextTick": "globalThis.process.nextTick",
       },
     },
   },

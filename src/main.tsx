@@ -25,6 +25,22 @@ console.log("✅ Polyfills loaded:", {
   hasEventEmitter: typeof EventEmitter === "function",
 });
 
+// CRITICAL: Verify process.nextTick before proceeding
+if (typeof (globalThis as any).process?.nextTick !== "function") {
+  console.error("❌ CRITICAL: process.nextTick still not available!");
+  alert("App initialization error. Please refresh the page.");
+  throw new Error("process.nextTick polyfill failed");
+}
+
+// Test that it actually works
+try {
+  (globalThis as any).process.nextTick(() => {
+    console.log("✅ process.nextTick test successful");
+  });
+} catch (error) {
+  console.error("❌ process.nextTick test failed:", error);
+}
+
 // NOW import application code
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
@@ -39,6 +55,11 @@ bootstrapWeb3Auth()
   })
   .catch((error) => {
     console.error("❌ Failed to bootstrap Web3Auth:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     // Still mount React so user can see error
     createRoot(document.getElementById("root")!).render(<App />);
   });

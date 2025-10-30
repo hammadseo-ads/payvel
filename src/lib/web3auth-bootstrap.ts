@@ -12,6 +12,12 @@ export async function bootstrapWeb3Auth() {
   }
 
   console.log('🔧 Bootstrapping Web3Auth...');
+  
+  // Verify polyfills before creating instance
+  if (typeof (globalThis as any).process?.nextTick !== "function") {
+    throw new Error("FATAL: process.nextTick not available before Web3Auth init");
+  }
+  
   console.log('📋 Client ID:', clientId ? clientId.substring(0, 10) + '...' : 'MISSING');
 
   const chainConfig = {
@@ -61,6 +67,11 @@ export async function bootstrapWeb3Auth() {
   } as any);
 
   console.log('⚙️ Calling web3auth.init()...');
+  console.log('🔍 Pre-init process check:', {
+    hasProcess: typeof process !== 'undefined',
+    hasGlobalProcess: typeof (globalThis as any).process !== 'undefined',
+    hasNextTick: typeof (globalThis as any).process?.nextTick === 'function',
+  });
   
   try {
     await web3authInstance.init();
@@ -76,8 +87,22 @@ export async function bootstrapWeb3Auth() {
     });
     
     return web3authInstance;
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Web3Auth init failed:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    // Check if it's the nextTick error
+    if (error.message?.includes('nextTick') || error.stack?.includes('nextTick')) {
+      console.error('🔴 This is a process.nextTick polyfill failure');
+      console.error('Current process state:', {
+        windowProcess: typeof window.process,
+        globalProcess: typeof (globalThis as any).process,
+        nextTick: typeof (globalThis as any).process?.nextTick,
+      });
+    }
+    
     throw error;
   }
 }
