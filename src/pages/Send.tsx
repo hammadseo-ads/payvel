@@ -86,8 +86,23 @@ const Send = () => {
         throw new Error(error.message || "Failed to submit transaction");
       }
 
-      toast.success("Transaction submitted successfully!");
-      navigate("/dashboard");
+      if (data.ok) {
+        toast.success(
+          data.userOpHash 
+            ? "Transaction submitted! View on explorer."
+            : "Transaction submitted successfully!"
+        );
+        
+        // If we have a userOpHash, log it for debugging
+        if (data.userOpHash) {
+          console.log("UserOp Hash:", data.userOpHash);
+          console.log("JiffyScan:", `https://jiffyscan.xyz/userOpHash/${data.userOpHash}?network=base-sepolia`);
+        }
+        
+        navigate("/dashboard");
+      } else {
+        throw new Error(data.error || "Transaction failed");
+      }
     } catch (error: any) {
       console.error("Send error:", error);
       toast.error(error.message || "Failed to send transaction");

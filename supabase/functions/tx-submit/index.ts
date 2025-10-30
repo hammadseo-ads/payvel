@@ -69,7 +69,7 @@ serve(async (req) => {
 
     console.log("💰 Transaction request:", { to, amount, chainId, from: userData.smart_account_address });
 
-    // Log transaction
+    // Log transaction intent
     const { data: txData, error: txError } = await supabase
       .from("tx_logs")
       .insert({
@@ -77,7 +77,7 @@ serve(async (req) => {
         chain_id: chainId,
         to_address: to,
         amount: amount,
-        status: "submitted",
+        status: "pending",
       })
       .select()
       .single();
@@ -89,14 +89,77 @@ serve(async (req) => {
 
     console.log("✅ Transaction logged:", txData.id);
 
-    return new Response(
-      JSON.stringify({ 
-        ok: true, 
-        message: "Transaction submitted",
-        transactionId: txData.id,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Execute transaction on blockchain
+    try {
+      console.log("🚀 Executing transaction on-chain...");
+      
+      const executeResponse = await fetch(
+        `${supabaseUrl}/functions/v1/tx-execute`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": req.headers.get("authorization")!,
+            "apikey": supabaseKey,
+          },
+          body: JSON.stringify({
+            transactionId: txData.id,
+            to,
+            amount,
+            chainId,
+          }),
+        }
+      );
+
+      const executeData = await executeResponse.json();
+
+      if (!executeResponse.ok) {
+        throw new Error(executeData.error || "Transaction execution failed");
+      }
+
+      // Update with transaction hashes
+      await supabase
+        .from("tx_logs")
+        .update({
+          user_op_hash: executeData.userOpHash,
+          tx_hash: executeData.txHash,
+          status: "submitted",
+        })
+        .eq("id", txData.id);
+
+      console.log("✅ Transaction executed:", executeData.userOpHash);
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          message: "Transaction executed successfully",
+          transactionId: txData.id,
+          userOpHash: executeData.userOpHash,
+          txHash: executeData.txHash,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (executionError: any) {
+      console.error("❌ Transaction execution failed:", executionError);
+
+      // Update database with error
+      await supabase
+        .from("tx_logs")
+        .update({
+          status: "failed",
+          error_message: executionError.message,
+        })
+        .eq("id", txData.id);
+
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: executionError.message,
+          transactionId: txData.id,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
   } catch (error: any) {
     console.error("❌ Error in tx-submit:", error);
     return new Response(

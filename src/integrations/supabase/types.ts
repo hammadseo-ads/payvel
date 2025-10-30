@@ -20,6 +20,7 @@ export type Database = {
           chain_id: string
           created_at: string | null
           data: string | null
+          error_message: string | null
           id: string
           status: string | null
           to_address: string
@@ -32,6 +33,7 @@ export type Database = {
           chain_id: string
           created_at?: string | null
           data?: string | null
+          error_message?: string | null
           id?: string
           status?: string | null
           to_address: string
@@ -44,6 +46,7 @@ export type Database = {
           chain_id?: string
           created_at?: string | null
           data?: string | null
+          error_message?: string | null
           id?: string
           status?: string | null
           to_address?: string
