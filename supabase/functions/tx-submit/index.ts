@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as jose from "https://deno.land/x/jose@v5.9.6/index.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,15 +43,48 @@ serve(async (req) => {
     console.log("🔐 Authenticated user:", web3authUserId);
 
     // Get request body
-    const { to, amount, chainId } = await req.json();
+    const body = await req.json();
+
+    // Define validation schema
+    const TxSubmitSchema = z.object({
+      to: z.string()
+        .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum address format")
+        .length(42, "Address must be 42 characters"),
+      amount: z.string()
+        .regex(/^\d+\.?\d*$/, "Amount must be numeric")
+        .refine(
+          (val) => parseFloat(val) > 0,
+          "Amount must be greater than 0"
+        )
+        .refine(
+          (val) => parseFloat(val) <= 1000000,
+          "Amount exceeds maximum allowed (1,000,000 ETH)"
+        ),
+      chainId: z.string()
+        .regex(/^\d+$/, "Chain ID must be numeric")
+        .refine(
+          (val) => ["84532", "8453"].includes(val),
+          "Unsupported chain ID. Only Base Sepolia (84532) and Base Mainnet (8453) are supported"
+        ),
+    });
 
     // Validate input
-    if (!to || !amount || !chainId) {
+    const validation = TxSubmitSchema.safeParse(body);
+    
+    if (!validation.success) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: to, amount, chainId" }),
+        JSON.stringify({ 
+          error: "Invalid input",
+          details: validation.error.issues.map(i => ({
+            field: i.path.join('.'),
+            message: i.message
+          }))
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const { to, amount, chainId } = validation.data;
 
     // Get user from database
     const { data: userData, error: userError } = await supabase
@@ -69,13 +103,13 @@ serve(async (req) => {
 
     console.log("💰 Transaction request:", { to, amount, chainId, from: userData.smart_account_address });
 
-    // Log transaction intent
+    // Log transaction intent with normalized address
     const { data: txData, error: txError } = await supabase
       .from("tx_logs")
       .insert({
         user_id: userData.id,
         chain_id: chainId,
-        to_address: to,
+        to_address: to.toLowerCase(), // Normalize address to lowercase
         amount: amount,
         status: "pending",
       })

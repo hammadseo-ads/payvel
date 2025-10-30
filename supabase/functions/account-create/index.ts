@@ -74,26 +74,10 @@ serve(async (req) => {
         );
       }
     } else {
-      console.warn("⚠️ No ID token provided - using temporary data");
-      
-      // Fallback if no token (should not happen in production)
-      const { data, error } = await supabase
-        .from("users")
-        .upsert({ 
-          web3auth_user_id: "temp_id",
-          email: "user@example.com",
-          smart_account_address: smartAccountAddress 
-        }, { 
-          onConflict: "web3auth_user_id" 
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      console.error("❌ No ID token provided");
       return new Response(
-        JSON.stringify({ ok: true, smartAccountAddress, email: data.email }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "ID token is required for authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
   } catch (error: any) {
