@@ -66,8 +66,6 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     global: "globalThis",
-    'global.process': 'window.process',
-    'globalThis.process': 'window.process',
   },
   optimizeDeps: {
     exclude: [],
@@ -121,16 +119,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          // Force process polyfill into main chunk to ensure single instance
-          if (id.includes('process') || id.includes('polyfills/process')) {
-            return 'main';
-          }
-        },
-      },
-    },
     commonjsOptions: {
       transformMixedEsModules: true,
       defaultIsModuleExports: true,

@@ -1,22 +1,14 @@
 // ============================================
 // CRITICAL: Import polyfills FIRST
 // ============================================
-// MUST be first import - sets up process.nextTick for all modules
-import processPolyfill from './polyfills/process';
+import './polyfills/process';
 import { Buffer } from "buffer";
 import EventEmitter from "events";
 
-// AGGRESSIVE GLOBAL INJECTION - Force single process instance across ALL bundles
-// This ensures Web3Auth's bundle uses the same polyfilled process
-(window as any).process = processPolyfill;
-(globalThis as any).process = processPolyfill;
+// Global assignments
 (globalThis as any).global = globalThis;
 (globalThis as any).Buffer = Buffer;
 (globalThis as any).EventEmitter = EventEmitter;
-
-// Freeze process to prevent any overwrites
-Object.freeze(processPolyfill);
-Object.freeze(processPolyfill.nextTick);
 
 // Ensure nextTick is truly present with microtask fallback
 if (typeof (globalThis as any).process.nextTick !== "function") {

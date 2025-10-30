@@ -1,4 +1,5 @@
 import { getWeb3AuthInstance } from "./web3auth-bootstrap";
+import { WALLET_CONNECTORS, AUTH_CONNECTION } from "@web3auth/modal";
 
 export async function getWeb3Auth() {
   return getWeb3AuthInstance();
@@ -14,11 +15,11 @@ export async function initWeb3Auth() {
   }
 }
 
-async function loginWithModal() {
+async function loginWithProvider(authConnection: string, authConnectionId: string) {
   try {
     const web3auth = await getWeb3Auth();
     
-    console.log('🔐 Opening login modal...');
+    console.log('🔐 Logging in with connection:', authConnectionId);
     
     // Clear stale session data
     const keysToRemove = Object.keys(localStorage).filter(key => 
@@ -27,8 +28,11 @@ async function loginWithModal() {
     keysToRemove.forEach(key => localStorage.removeItem(key));
     console.log('🧹 Cleared stale session data:', keysToRemove.length, 'keys');
     
-    // Open the configured modal (shows Google, Email, SMS options)
-    const provider = await web3auth.connect();
+    // V10 API - Connect using AUTH connector
+    const provider = await web3auth.connectTo(WALLET_CONNECTORS.AUTH, {
+      authConnection,
+      authConnectionId,
+    });
     
     if (!provider) {
       throw new Error("No provider returned from login");
@@ -77,8 +81,21 @@ async function loginWithModal() {
   }
 }
 
+export async function loginWithGoogle() {
+  return loginWithProvider(AUTH_CONNECTION.GOOGLE, "payvel-connection");
+}
+
+export async function loginWithEmail() {
+  return loginWithProvider(AUTH_CONNECTION.EMAIL_PASSWORDLESS, "payvel-email-connection");
+}
+
+export async function loginWithSMS() {
+  return loginWithProvider(AUTH_CONNECTION.SMS_PASSWORDLESS, "payvel-sms-connection");
+}
+
+// Default login uses Google
 export async function login() {
-  return loginWithModal();
+  return loginWithGoogle();
 }
 
 export async function logout() {
