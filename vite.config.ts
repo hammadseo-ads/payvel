@@ -121,6 +121,8 @@ export default defineConfig(({ mode }) => ({
   build: {
     commonjsOptions: {
       transformMixedEsModules: true,
+      defaultIsModuleExports: true,
+      requireReturnsDefault: "preferred",
     },
   },
 }));
