@@ -18,11 +18,16 @@ export async function initSimpleSmartAccount() {
 
     console.log("✅ Provider available, creating wallet client...");
 
-    // Request account from Web3Auth provider
-    const [account] = await provider.request({ 
-      method: 'eth_requestAccounts' 
+    // Get already-connected accounts from Web3Auth provider
+    const accounts = await provider.request({ 
+      method: 'eth_accounts' 
     });
 
+    if (!accounts || accounts.length === 0) {
+      throw new Error("No accounts found from Web3Auth. Please reconnect.");
+    }
+
+    const account = accounts[0];
     console.log("✅ Account retrieved:", account);
 
     // Create wallet client from Web3Auth provider with account
