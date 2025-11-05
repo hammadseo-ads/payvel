@@ -1,15 +1,16 @@
-import { getWalletClientFromProvider, initSmartAccount, shortenAddress as biconomyShortenAddress } from "./biconomy";
+import { createWalletClient, custom } from "viem";
+import { baseSepolia } from "viem/chains";
+import { createSmartAccountClient } from "@biconomy/account";
 
 export function shortenAddress(address: string, chars = 4): string {
-  return biconomyShortenAddress(address, chars);
+  if (!address) return "";
+  return `${address.substring(0, chars + 2)}...${address.substring(address.length - chars)}`;
 }
 
 export async function initSimpleSmartAccount() {
   try {
-    // Get Web3Auth provider
-    const web3auth = (await import("./web3auth")).getWeb3Auth();
-    const instance = await web3auth;
-    const provider = instance.provider;
+    // Get Web3Auth provider from window (injected by Web3AuthProvider)
+    const provider = (window as any).ethereum;
     
     if (!provider) {
       throw new Error("❌ Provider not available – user must login first");
@@ -18,10 +19,22 @@ export async function initSimpleSmartAccount() {
     console.log("✅ Provider available, creating wallet client...");
 
     // Create wallet client from Web3Auth provider
-    const walletClient = await getWalletClientFromProvider(provider);
+    const walletClient = createWalletClient({
+      chain: baseSepolia,
+      transport: custom(provider),
+    });
     
     // Initialize Biconomy smart account
-    const { smartAccount, saAddress } = await initSmartAccount(walletClient);
+    const bundlerUrl = import.meta.env.VITE_BICONOMY_BUNDLER_URL || "";
+    const biconomyApiKey = import.meta.env.VITE_BICONOMY_API_KEY || "";
+
+    const smartAccount = await createSmartAccountClient({
+      signer: walletClient,
+      bundlerUrl,
+      biconomyPaymasterApiKey: biconomyApiKey,
+    });
+
+    const saAddress = await smartAccount.getAccountAddress();
     
     return {
       smartAccount,

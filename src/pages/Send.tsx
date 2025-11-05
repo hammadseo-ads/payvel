@@ -9,10 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getWeb3Auth } from "@/lib/web3auth";
 
 const Send = () => {
-  const { smartAccount } = useAuth();
+  const { smartAccount, getIdToken } = useAuth();
   const navigate = useNavigate();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
@@ -42,9 +41,7 @@ const Send = () => {
 
     try {
       // Get ID token for authentication
-      const web3auth = await getWeb3Auth();
-      const tokenInfo = await web3auth.getIdentityToken();
-      const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
+      const idToken = await getIdToken();
       
       if (!idToken) {
         throw new Error("Authentication failed. Please log in again.");

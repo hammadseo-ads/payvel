@@ -7,11 +7,10 @@ import { Header } from "@/components/Header";
 import { WalletCard } from "@/components/WalletCard";
 import { TransactionList } from "@/components/TransactionList";
 import { supabase } from "@/integrations/supabase/client";
-import { getWeb3Auth } from "@/lib/web3auth";
 import { toast } from "sonner";
 
 const Dashboard = () => {
-  const { isAuthenticated, isLoading, smartAccountAddress } = useAuth();
+  const { isAuthenticated, isLoading, smartAccountAddress, getIdToken } = useAuth();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState<string>("0.00");
@@ -33,9 +32,7 @@ const Dashboard = () => {
   async function loadTransactions() {
     try {
       // Get ID token for authentication
-      const web3auth = await getWeb3Auth();
-      const tokenInfo = await web3auth.getIdentityToken();
-      const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
+      const idToken = await getIdToken();
       
       if (!idToken) {
         console.error("No ID token available");
@@ -63,9 +60,7 @@ const Dashboard = () => {
   async function fetchBalance() {
     setIsLoadingBalance(true);
     try {
-      const web3auth = await getWeb3Auth();
-      const tokenInfo = await web3auth.getIdentityToken();
-      const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
+      const idToken = await getIdToken();
       
       if (!idToken) {
         console.error("No ID token available");

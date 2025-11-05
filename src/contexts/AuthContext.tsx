@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { initWeb3Auth, login as web3Login, logout as web3Logout } from "@/lib/web3auth";
-import { initSimpleSmartAccount, shortenAddress } from "@/lib/biconomy-simple";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useWeb3Auth } from "@web3auth/modal-react-hooks";
+import { initSimpleSmartAccount } from "@/lib/biconomy-simple";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,235 +12,133 @@ interface AuthContextType {
   login: () => Promise<void>;
   logout: () => Promise<void>;
   smartAccount: any;
+  getIdToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { connect, logout: web3AuthLogout, isConnected, provider, getUserInfo } = useWeb3Auth();
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
-  const [idToken, setIdToken] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
 
+  // Initialize Biconomy when Web3Auth connects
   useEffect(() => {
-    initializeAuth();
-  }, []);
+    if (isConnected && provider && !smartAccountAddress && !isInitializing) {
+      initializeBiconomy();
+    }
+  }, [isConnected, provider, smartAccountAddress]);
 
-  async function initializeAuth() {
+  const getIdToken = async (): Promise<string | null> => {
+    if (!provider) return null;
+    
     try {
-      const web3auth = await initWeb3Auth();
-      
-      // Check if truly connected (not just "connecting")
-      const isConnected = 
-        (web3auth as any).connected === true &&
-        (web3auth as any).status === "connected" &&
-        !!web3auth.provider;
-      
-      console.log("🔍 Auth state:", {
-        connected: (web3auth as any).connected,
-        status: (web3auth as any).status,
-        hasProvider: !!web3auth.provider,
-        isConnected,
-      });
-      
-      if (!isConnected) {
-        console.log("⚠️ No active session detected");
-        setIsLoading(false);
-        return;
-      }
-      
-      // Additional safety: verify accounts exist
-      const accounts = await web3auth.provider.request({ method: "eth_accounts" }) as string[];
-      if (!accounts || accounts.length === 0) {
-        console.log("⚠️ Provider exists but no accounts - session incomplete");
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log("🔄 Resuming session with", accounts.length, "account(s)");
-      
-      // Verify chain
-      const chainId = await web3auth.provider.request({ method: "eth_chainId" }) as string;
-      console.log("⛓️ Connected to chain:", chainId, chainId === "0x14A34" ? "✅ Base Sepolia" : "⚠️ WRONG CHAIN");
-      
-      if (chainId !== "0x14A34") {
-        console.warn("⚠️ Provider is on wrong chain. Expected 0x14A34 (Base Sepolia), got", chainId);
-      }
-      
-      // Get user info
-      const userInfo = await web3auth.getUserInfo();
-      
-      if (!userInfo) {
-        console.warn("⚠️ No user info after resume");
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log("👤 User email:", userInfo.email);
-      
-      // Get ID Token using getIdentityToken
-      const tokenInfo = await web3auth.getIdentityToken();
-      const idToken = typeof tokenInfo === 'string' ? tokenInfo : (tokenInfo as any)?.idToken;
-      console.log("🔑 ID Token present:", !!idToken);
-      
-      if (!idToken) {
-        console.error("❌ No idToken - authentication incomplete");
-        setIsLoading(false);
-        return;
-      }
-      
-      setIdToken(idToken as string);
-      
-      // Initialize smart account
-      console.log("🔧 Initializing smart account...");
-      const { smartAccount, saAddress } = await initSimpleSmartAccount();
-      setSmartAccount(smartAccount);
-      setSmartAccountAddress(saAddress);
-      console.log("✅ Smart account initialized:", saAddress);
-      
-      // Store user mapping in database
-      const { data, error } = await supabase.functions.invoke("account-create", {
-        body: { 
-          smartAccountAddress: saAddress,
-          idToken: idToken,
-        },
-      });
-      
-      if (error) {
-        console.error("Failed to create account mapping:", error);
-      }
-      
-      if (data?.email) {
-        setUserEmail(data.email);
-      }
-      
-      setIsAuthenticated(true);
-      toast.success("Successfully logged in!");
-      
-      setIsLoading(false);
+      const idToken = await provider.request({ method: "eth_private_key" }) as string;
+      return idToken;
     } catch (error) {
-      console.error("❌ Failed to initialize auth:", error);
-      // Log storage access status
-      try {
-        localStorage.setItem('test', 'test');
-        localStorage.removeItem('test');
-        console.log("✅ localStorage is accessible");
-      } catch (storageError) {
-        console.error("❌ localStorage is BLOCKED:", storageError);
-      }
-      setIsLoading(false);
+      console.error("Failed to get ID token:", error);
+      return null;
     }
-  }
+  };
 
-  async function login() {
+  const initializeBiconomy = async () => {
+    if (isInitializing) return;
+    
     try {
-      setIsLoading(true);
-      const { provider, idToken } = await web3Login();
-      
-      if (!provider) {
-        throw new Error("No provider returned from login");
-      }
-      
-      setIdToken(idToken);
+      setIsInitializing(true);
+      console.log("🔧 Initializing Biconomy smart account...");
 
-      // Initialize Biconomy smart account with Web3Auth provider
-      const { smartAccount, saAddress } = await initSimpleSmartAccount();
-      
-      setSmartAccount(smartAccount);
+      // Get user info for email
+      const userInfo = await getUserInfo();
+      setUserEmail(userInfo?.email || null);
+
+      // Initialize smart account
+      const { smartAccount: sa, saAddress } = await initSimpleSmartAccount();
+      setSmartAccount(sa);
       setSmartAccountAddress(saAddress);
 
-      // Store user mapping in database
-      const { data, error } = await supabase.functions.invoke("account-create", {
-        body: { 
+      console.log("✅ Smart account initialized:", saAddress);
+
+      // Get ID token for backend authentication
+      const idToken = await getIdToken();
+
+      if (!idToken) {
+        console.error("❌ Failed to get ID token");
+        return;
+      }
+
+      // Store user in database
+      const { error } = await supabase.functions.invoke('account-create', {
+        body: {
           smartAccountAddress: saAddress,
           idToken: idToken,
-        },
+        }
       });
 
       if (error) {
-        console.error("Failed to create account mapping:", error);
-      }
-
-      if (data?.email) {
-        setUserEmail(data.email);
-      }
-
-      setIsAuthenticated(true);
-      toast.success("Successfully logged in!");
-    } catch (error: any) {
-      console.error("❌ Login failed:", error);
-      
-      // User-friendly error messages
-      if (error.message?.includes("User closed modal")) {
-        toast.error("Login cancelled");
-      } else if (error.message?.includes("localStorage") || error.message?.includes("storage")) {
-        toast.error("Please enable cookies and local storage");
-      } else if (error.message?.includes("No provider")) {
-        toast.error("Failed to connect wallet");
+        console.error("❌ Failed to create account:", error);
+        toast.error("Failed to create account");
       } else {
-        toast.error(error.message || "Failed to login. Please try again.");
+        console.log("✅ Account created successfully");
+        toast.success("Account created successfully!");
       }
-      
-      setIsAuthenticated(false);
+    } catch (error) {
+      console.error("❌ Error initializing Biconomy:", error);
+      toast.error("Failed to initialize wallet");
     } finally {
-      setIsLoading(false);
+      setIsInitializing(false);
     }
-  }
+  };
 
-  async function logout() {
+  const login = async () => {
     try {
-      console.log("🚪 Logging out from AuthContext...");
-      
-      // 1. Call Web3Auth logout (includes localStorage cleanup)
-      await web3Logout();
-      
-      // 2. Reset all React state
-      setIsAuthenticated(false);
-      setSmartAccountAddress(null);
-      setUserEmail(null);
-      setSmartAccount(null);
-      setIdToken(null);
-      
-      console.log("✅ AuthContext state cleared");
-      toast.success("Successfully logged out");
-    } catch (error: any) {
-      console.error("❌ Logout error:", error);
-      
-      // Force state reset even if logout fails
-      setIsAuthenticated(false);
-      setSmartAccountAddress(null);
-      setUserEmail(null);
-      setSmartAccount(null);
-      setIdToken(null);
-      
-      // Still show success to user (they're logged out from UI perspective)
-      toast.success("Logged out");
+      console.log("🔐 Starting login...");
+      await connect();
+    } catch (error) {
+      console.error("❌ Login failed:", error);
+      toast.error("Login failed. Please try again.");
+      throw error;
     }
-  }
+  };
+
+  const logout = async () => {
+    try {
+      console.log("🚪 Logging out...");
+      await web3AuthLogout();
+      setSmartAccountAddress(null);
+      setSmartAccount(null);
+      setUserEmail(null);
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("❌ Logout failed:", error);
+      toast.error("Logout failed");
+    }
+  };
 
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated,
-        isLoading,
+        isAuthenticated: isConnected && !!smartAccountAddress,
+        isLoading: isInitializing,
         smartAccountAddress,
         userEmail,
         login,
         logout,
         smartAccount,
+        getIdToken,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
+};
