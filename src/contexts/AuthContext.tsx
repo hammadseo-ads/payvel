@@ -25,12 +25,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [smartAccount, setSmartAccount] = useState<any>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize Web3Auth on mount
   useEffect(() => {
-    const initWeb3Auth = () => {
+    const initWeb3Auth = async () => {
       try {
         const web3auth = createWeb3AuthInstance();
+        
+        // Initialize the modal BEFORE using it
+        await (web3auth as any).initModal();
+        
+        setIsInitialized(true);
         setWeb3Auth(web3auth);
 
         // Check if user is already logged in
@@ -39,6 +45,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error("Failed to initialize Web3Auth:", error);
+        toast.error("Failed to initialize wallet. Please refresh the page.");
+        setIsInitialized(false);
       }
     };
     initWeb3Auth();
@@ -154,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         isAuthenticated: isConnected && !!smartAccountAddress,
-        isLoading: isInitializing || !web3Auth,
+        isLoading: isInitializing || !isInitialized,
         smartAccountAddress,
         userEmail,
         login,
