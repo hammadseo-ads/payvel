@@ -1,5 +1,4 @@
-import { createWalletClient, custom } from "viem";
-import { baseSepolia } from "viem/chains";
+import { ethers } from "ethers";
 import { createSmartAccountClient } from "@biconomy/account";
 
 export function shortenAddress(address: string, chars = 4): string {
@@ -16,35 +15,26 @@ export async function initSimpleSmartAccount() {
       throw new Error("❌ Provider not available – user must login first");
     }
 
-    console.log("✅ Provider available, creating wallet client...");
+    console.log("✅ Provider available, creating Ethers provider...");
 
-    // Get already-connected accounts from Web3Auth provider
-    const accounts = await provider.request({ 
-      method: 'eth_accounts' 
-    });
-
-    if (!accounts || accounts.length === 0) {
-      throw new Error("No accounts found from Web3Auth. Please reconnect.");
-    }
-
-    const account = accounts[0];
-    console.log("✅ Account retrieved:", account);
-
-    // Create wallet client from Web3Auth provider with account
-    const walletClient = createWalletClient({
-      account,
-      chain: baseSepolia,
-      transport: custom(provider),
-    });
+    // Create Ethers provider from Web3Auth provider
+    const ethersProvider = new ethers.providers.Web3Provider(provider);
     
-    // Initialize Biconomy smart account
+    // Get Ethers signer
+    const signer = ethersProvider.getSigner();
+    const account = await signer.getAddress();
+    console.log("✅ Signer address retrieved:", account);
+    
+    // Initialize Biconomy smart account with Ethers signer
     const bundlerUrl = import.meta.env.VITE_BICONOMY_BUNDLER_URL || "";
     const biconomyApiKey = import.meta.env.VITE_BICONOMY_API_KEY || "";
 
     const smartAccount = await createSmartAccountClient({
-      signer: walletClient,
+      signer: signer,
       bundlerUrl,
       biconomyPaymasterApiKey: biconomyApiKey,
+      rpcUrl: "https://sepolia.base.org",
+      chainId: 84532,
     });
 
     const saAddress = await smartAccount.getAccountAddress();
