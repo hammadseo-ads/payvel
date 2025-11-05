@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Web3AuthProvider } from "@web3auth/modal/react";
+import { WagmiProvider } from "@web3auth/modal/react/wagmi";
 import web3AuthContextConfig from "@/config/web3authContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary, AuthErrorFallback } from "@/components/ErrorBoundary";
@@ -20,8 +21,9 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ErrorBoundary>
       <Web3AuthProvider config={web3AuthContextConfig}>
-        <AuthProvider>
-          <ErrorBoundary fallback={<AuthErrorFallback />}>
+        <WagmiProvider>
+          <AuthProvider>
+            <ErrorBoundary fallback={<AuthErrorFallback />}>
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
@@ -55,7 +57,8 @@ const App = () => (
               </TooltipProvider>
             </ErrorBoundary>
           </AuthProvider>
-        </Web3AuthProvider>
+        </WagmiProvider>
+      </Web3AuthProvider>
     </ErrorBoundary>
   </QueryClientProvider>
 );
