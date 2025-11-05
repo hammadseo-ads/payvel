@@ -20,7 +20,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { connect, isConnected } = useWeb3AuthConnect();
+  const { connect, isConnected, error: connectError } = useWeb3AuthConnect();
   const { disconnect } = useWeb3AuthDisconnect();
   const { userInfo } = useWeb3AuthUser();
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
@@ -28,6 +28,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isInitializing, setIsInitializing] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginAttemptTime, setLoginAttemptTime] = useState<number | null>(null);
+
+  // Monitor Web3Auth connection errors
+  useEffect(() => {
+    if (connectError) {
+      console.error("❌ Web3Auth connection error:", connectError);
+      setLoginError(connectError.message || "Failed to connect with Web3Auth");
+      setIsInitializing(false);
+      setLoginAttemptTime(null);
+      toast.error(`Connection failed: ${connectError.message}`);
+    }
+  }, [connectError]);
 
   // Monitor login timeout
   useEffect(() => {
@@ -44,6 +55,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return () => clearTimeout(timeout);
     }
   }, [isInitializing, loginAttemptTime]);
+
+  // Log connection state changes for debugging
+  useEffect(() => {
+    console.log("🔄 Connection state:", {
+      isConnected,
+      hasSmartAccount: !!smartAccountAddress,
+      isInitializing,
+      userEmail: userInfo?.email,
+      hasConnectError: !!connectError,
+    });
+  }, [isConnected, smartAccountAddress, isInitializing, userInfo, connectError]);
 
   // Initialize Biconomy when connected
   useEffect(() => {

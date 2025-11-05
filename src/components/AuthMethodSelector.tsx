@@ -68,13 +68,24 @@ export const AuthMethodSelector = ({
         </Button>
 
         {isLoading && (
-          <div className="text-center space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Complete the authentication in the popup window
-            </p>
-            <p className="text-xs text-muted-foreground/70">
-              If you don't see a popup, check if it was blocked by your browser
-            </p>
+          <div className="text-center space-y-3 p-4 bg-secondary/30 rounded-lg border border-secondary">
+            <div className="flex items-center justify-center space-x-2">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              <span className="text-sm font-medium text-foreground">
+                Authenticating...
+              </span>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">
+                Complete the authentication in the popup window
+              </p>
+              <p className="text-xs text-muted-foreground/70">
+                Choose Google, Email (OTP), or SMS to sign in
+              </p>
+              <p className="text-xs text-muted-foreground/70">
+                If you don't see a popup, check if it was blocked by your browser
+              </p>
+            </div>
           </div>
         )}
 
