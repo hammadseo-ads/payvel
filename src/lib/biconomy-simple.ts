@@ -6,11 +6,8 @@ export function shortenAddress(address: string, chars = 4): string {
   return `${address.substring(0, chars + 2)}...${address.substring(address.length - chars)}`;
 }
 
-export async function initSimpleSmartAccount() {
+export async function initSimpleSmartAccount(provider: any) {
   try {
-    // Get Web3Auth provider from window (injected by Web3AuthProvider)
-    const provider = (window as any).ethereum;
-    
     if (!provider) {
       throw new Error("❌ Provider not available – user must login first");
     }

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser } from "@web3auth/modal/react";
+import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser, useWeb3Auth } from "@web3auth/modal/react";
 import { initSimpleSmartAccount } from "@/lib/biconomy-simple";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { connect, isConnected, error: connectError } = useWeb3AuthConnect();
   const { disconnect } = useWeb3AuthDisconnect();
   const { userInfo } = useWeb3AuthUser();
+  const web3auth = useWeb3Auth();
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -76,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isConnected, smartAccountAddress]);
 
   const getIdToken = async (): Promise<string | null> => {
-    const provider = (window as any).ethereum;
+    const provider = web3auth?.provider;
     if (!provider) {
       console.error("❌ Provider not available for ID token");
       return null;
@@ -104,19 +105,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoginError(null);
       console.log("🔧 Initializing Biconomy smart account...");
 
-      // Check if provider is available
-      const provider = (window as any).ethereum;
+      // Check if provider is available from Web3Auth instance
+      const provider = web3auth?.provider;
       if (!provider) {
         throw new Error("Provider not available. Web3Auth may not have completed authentication.");
       }
-      console.log("✅ Provider available:", provider);
+      console.log("✅ Provider available from Web3Auth instance");
 
       // Wait a bit for provider to be fully ready
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Initialize smart account
       console.log("🔧 Creating smart account...");
-      const { smartAccount: sa, saAddress } = await initSimpleSmartAccount();
+      const { smartAccount: sa, saAddress } = await initSimpleSmartAccount(provider);
       setSmartAccount(sa);
       setSmartAccountAddress(saAddress);
 
