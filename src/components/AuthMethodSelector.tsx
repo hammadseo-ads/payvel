@@ -1,14 +1,19 @@
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
 interface AuthMethodSelectorProps {
   onGetStarted: () => void;
   isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export const AuthMethodSelector = ({ 
   onGetStarted,
-  isLoading = false
+  isLoading = false,
+  error = null,
+  onRetry
 }: AuthMethodSelectorProps) => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background to-secondary/20">
@@ -25,6 +30,27 @@ export const AuthMethodSelector = ({
           </p>
         </div>
 
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Authentication Error</AlertTitle>
+            <AlertDescription className="mt-2">
+              {error}
+              {onRetry && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRetry}
+                  className="mt-3 w-full"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Button 
           size="lg" 
           onClick={onGetStarted}
@@ -40,6 +66,17 @@ export const AuthMethodSelector = ({
             "Get Started"
           )}
         </Button>
+
+        {isLoading && (
+          <div className="text-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Complete the authentication in the popup window
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              If you don't see a popup, check if it was blocked by your browser
+            </p>
+          </div>
+        )}
 
         <p className="text-center text-xs text-muted-foreground">
           By continuing, you agree to our Terms of Service and Privacy Policy

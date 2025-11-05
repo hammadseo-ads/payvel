@@ -13,6 +13,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   smartAccount: any;
   getIdToken: () => Promise<string | null>;
+  loginError: string | null;
+  retryLogin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,35 +26,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginAttemptTime, setLoginAttemptTime] = useState<number | null>(null);
+
+  // Monitor login timeout
+  useEffect(() => {
+    if (isInitializing && loginAttemptTime) {
+      const timeout = setTimeout(() => {
+        if (isInitializing) {
+          console.error("⏱️ Login timeout - initialization taking too long");
+          setLoginError("Login is taking longer than expected. Please try again.");
+          setIsInitializing(false);
+          toast.error("Login timeout. Please try again.");
+        }
+      }, 60000); // 60 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isInitializing, loginAttemptTime]);
 
   // Initialize Biconomy when connected
   useEffect(() => {
     if (isConnected && !smartAccountAddress && !isInitializing) {
+      console.log("✅ Web3Auth connection detected, initializing Biconomy...");
       initializeBiconomy();
     }
   }, [isConnected, smartAccountAddress]);
 
   const getIdToken = async (): Promise<string | null> => {
     const provider = (window as any).ethereum;
-    if (!provider) return null;
+    if (!provider) {
+      console.error("❌ Provider not available for ID token");
+      return null;
+    }
     
     try {
+      console.log("🔑 Attempting to get ID token...");
       const idToken = await provider.request({ method: "eth_private_key" }) as string;
+      console.log("✅ ID token retrieved successfully");
       return idToken;
     } catch (error) {
-      console.error("Failed to get ID token:", error);
+      console.error("❌ Failed to get ID token:", error);
       return null;
     }
   };
 
   const initializeBiconomy = async () => {
-    if (isInitializing) return;
+    if (isInitializing) {
+      console.log("⏳ Already initializing, skipping...");
+      return;
+    }
     
     try {
       setIsInitializing(true);
+      setLoginError(null);
       console.log("🔧 Initializing Biconomy smart account...");
 
+      // Check if provider is available
+      const provider = (window as any).ethereum;
+      if (!provider) {
+        throw new Error("Provider not available. Web3Auth may not have completed authentication.");
+      }
+      console.log("✅ Provider available:", provider);
+
+      // Wait a bit for provider to be fully ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       // Initialize smart account
+      console.log("🔧 Creating smart account...");
       const { smartAccount: sa, saAddress } = await initSimpleSmartAccount();
       setSmartAccount(sa);
       setSmartAccountAddress(saAddress);
@@ -63,11 +104,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const idToken = await getIdToken();
 
       if (!idToken) {
-        console.error("❌ Failed to get ID token");
+        console.warn("⚠️ Could not get ID token, skipping backend registration");
+        toast.success("Wallet initialized successfully!");
         return;
       }
 
       // Store user in database
+      console.log("💾 Registering account in backend...");
       const { error } = await supabase.functions.invoke('account-create', {
         body: {
           smartAccountAddress: saAddress,
@@ -77,28 +120,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error("❌ Failed to create account:", error);
-        toast.error("Failed to create account");
+        toast.error("Account created locally but backend registration failed");
       } else {
-        console.log("✅ Account created successfully");
-        toast.success("Account created successfully!");
+        console.log("✅ Account created successfully in backend");
+        toast.success("Welcome! Your account is ready.");
       }
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.message || "Unknown error occurred";
       console.error("❌ Error initializing Biconomy:", error);
-      toast.error("Failed to initialize wallet");
+      setLoginError(errorMessage);
+      
+      // Reset states on error
+      setSmartAccountAddress(null);
+      setSmartAccount(null);
+      
+      toast.error(`Failed to initialize wallet: ${errorMessage}`);
     } finally {
       setIsInitializing(false);
+      setLoginAttemptTime(null);
     }
   };
 
   const login = async () => {
     try {
-      console.log("🔐 Starting login...");
+      setLoginError(null);
+      setLoginAttemptTime(Date.now());
+      console.log("🔐 Starting Web3Auth login...");
+      
       await connect();
-    } catch (error) {
+      
+      console.log("✅ Web3Auth connect() completed");
+    } catch (error: any) {
+      const errorMessage = error?.message || "Authentication failed";
       console.error("❌ Login failed:", error);
-      toast.error("Login failed. Please try again.");
+      setLoginError(errorMessage);
+      setLoginAttemptTime(null);
+      
+      // Provide more specific error messages
+      if (errorMessage.includes("User closed")) {
+        toast.error("Login cancelled");
+      } else if (errorMessage.includes("popup")) {
+        toast.error("Please allow popups for this site");
+      } else {
+        toast.error(`Login failed: ${errorMessage}`);
+      }
+      
       throw error;
     }
+  };
+
+  const retryLogin = async () => {
+    console.log("🔄 Retrying login...");
+    setLoginError(null);
+    setSmartAccountAddress(null);
+    setSmartAccount(null);
+    await login();
   };
 
   const logout = async () => {
@@ -125,6 +201,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         smartAccount,
         getIdToken,
+        loginError,
+        retryLogin,
       }}
     >
       {children}

@@ -5,7 +5,7 @@ import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AuthMethodSelector } from "@/components/AuthMethodSelector";
 
 const Index = () => {
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, loginError, retryLogin } = useAuth();
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(true);
 
@@ -27,6 +27,8 @@ const Index = () => {
     <AuthMethodSelector
       onGetStarted={login}
       isLoading={isLoading}
+      error={loginError}
+      onRetry={retryLogin}
     />
   );
 };
