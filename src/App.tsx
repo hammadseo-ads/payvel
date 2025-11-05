@@ -3,10 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Web3AuthProvider } from "@web3auth/modal-react-hooks";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary, AuthErrorFallback } from "@/components/ErrorBoundary";
-import web3AuthContextConfig from "@/config/web3auth";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Send from "./pages/Send";
@@ -19,9 +17,8 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ErrorBoundary>
-      <Web3AuthProvider config={web3AuthContextConfig}>
-        <AuthProvider>
-          <ErrorBoundary fallback={<AuthErrorFallback />}>
+      <AuthProvider>
+        <ErrorBoundary fallback={<AuthErrorFallback />}>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -55,7 +52,6 @@ const App = () => (
             </TooltipProvider>
           </ErrorBoundary>
         </AuthProvider>
-      </Web3AuthProvider>
     </ErrorBoundary>
   </QueryClientProvider>
 );

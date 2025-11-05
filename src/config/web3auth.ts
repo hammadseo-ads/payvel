@@ -1,6 +1,5 @@
-import { type Web3AuthContextConfig } from "@web3auth/modal-react-hooks";
-import { WEB3AUTH_NETWORK, CHAIN_NAMESPACES } from "@web3auth/base";
-import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
+import { Web3Auth } from "@web3auth/modal";
+import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
 
 const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || "";
 
@@ -14,17 +13,18 @@ const chainConfig = {
   tickerName: "Ethereum",
 };
 
-const privateKeyProvider = new EthereumPrivateKeyProvider({
-  config: { chainConfig }
-});
-
-const web3AuthContextConfig: Web3AuthContextConfig = {
-  web3AuthOptions: {
+export const createWeb3AuthInstance = (): Web3Auth => {
+  return new Web3Auth({
     clientId,
     web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
-    privateKeyProvider,
     chainConfig,
-  },
+    uiConfig: {
+      appName: "Payvel",
+      mode: "dark",
+      loginMethodsOrder: ["google", "apple", "twitter"],
+      defaultLanguage: "en",
+      loginGridCol: 3,
+      primaryButton: "socialLogin",
+    },
+  } as any); // Type cast to work around TypeScript definition issues
 };
-
-export default web3AuthContextConfig;

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useWeb3Auth } from "@web3auth/modal-react-hooks";
+import { Web3Auth } from "@web3auth/modal";
+import { createWeb3AuthInstance } from "@/config/web3auth";
 import { initSimpleSmartAccount } from "@/lib/biconomy-simple";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,18 +19,37 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { connect, logout: web3AuthLogout, isConnected, provider, getUserInfo } = useWeb3Auth();
+  const [web3Auth, setWeb3Auth] = useState<Web3Auth | null>(null);
+  const [provider, setProvider] = useState<any>(null);
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
 
-  // Initialize Biconomy when Web3Auth connects
+  // Initialize Web3Auth on mount
   useEffect(() => {
-    if (isConnected && provider && !smartAccountAddress && !isInitializing) {
+    const initWeb3Auth = () => {
+      try {
+        const web3auth = createWeb3AuthInstance();
+        setWeb3Auth(web3auth);
+
+        // Check if user is already logged in
+        if (web3auth.status === "connected" && web3auth.provider) {
+          setProvider(web3auth.provider);
+        }
+      } catch (error) {
+        console.error("Failed to initialize Web3Auth:", error);
+      }
+    };
+    initWeb3Auth();
+  }, []);
+
+  // Initialize Biconomy when provider is available
+  useEffect(() => {
+    if (provider && !smartAccountAddress && !isInitializing) {
       initializeBiconomy();
     }
-  }, [isConnected, provider, smartAccountAddress]);
+  }, [provider, smartAccountAddress]);
 
   const getIdToken = async (): Promise<string | null> => {
     if (!provider) return null;
@@ -51,8 +71,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("🔧 Initializing Biconomy smart account...");
 
       // Get user info for email
-      const userInfo = await getUserInfo();
-      setUserEmail(userInfo?.email || null);
+      if (web3Auth) {
+        const userInfo = await web3Auth.getUserInfo();
+        setUserEmail(userInfo?.email || null);
+      }
 
       // Initialize smart account
       const { smartAccount: sa, saAddress } = await initSimpleSmartAccount();
@@ -93,9 +115,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async () => {
+    if (!web3Auth) {
+      toast.error("Web3Auth not initialized");
+      return;
+    }
+
     try {
       console.log("🔐 Starting login...");
-      await connect();
+      const web3authProvider = await web3Auth.connect();
+      setProvider(web3authProvider);
     } catch (error) {
       console.error("❌ Login failed:", error);
       toast.error("Login failed. Please try again.");
@@ -104,9 +132,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    if (!web3Auth) return;
+
     try {
       console.log("🚪 Logging out...");
-      await web3AuthLogout();
+      await web3Auth.logout();
+      setProvider(null);
       setSmartAccountAddress(null);
       setSmartAccount(null);
       setUserEmail(null);
@@ -117,11 +148,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isConnected = web3Auth?.status === "connected" && !!provider;
+
   return (
     <AuthContext.Provider
       value={{
         isAuthenticated: isConnected && !!smartAccountAddress,
-        isLoading: isInitializing,
+        isLoading: isInitializing || !web3Auth,
         smartAccountAddress,
         userEmail,
         login,
