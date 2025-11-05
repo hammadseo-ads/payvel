@@ -13,6 +13,7 @@ const chainConfig = {
   blockExplorerUrl: "https://sepolia.basescan.org",
   ticker: "ETH",
   tickerName: "Ethereum",
+  logo: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
 };
 
 const privateKeyProvider = new EthereumPrivateKeyProvider({
