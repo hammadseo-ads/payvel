@@ -18,8 +18,16 @@ export async function initSimpleSmartAccount() {
 
     console.log("✅ Provider available, creating wallet client...");
 
-    // Create wallet client from Web3Auth provider
+    // Request account from Web3Auth provider
+    const [account] = await provider.request({ 
+      method: 'eth_requestAccounts' 
+    });
+
+    console.log("✅ Account retrieved:", account);
+
+    // Create wallet client from Web3Auth provider with account
     const walletClient = createWalletClient({
+      account,
       chain: baseSepolia,
       transport: custom(provider),
     });
