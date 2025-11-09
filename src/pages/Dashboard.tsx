@@ -6,15 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { WalletCard } from "@/components/WalletCard";
 import { TransactionList } from "@/components/TransactionList";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { SUPPORTED_TOKENS } from "@/config/tokens";
-
-interface TokenBalance {
-  symbol: string;
-  balance: string;
-  decimals: number;
-}
+import { fetchAllBalances, TokenBalance } from "@/lib/balanceUtils";
 
 
 const Dashboard = () => {
@@ -54,41 +47,8 @@ const Dashboard = () => {
   async function fetchBalance() {
     setIsLoadingBalance(true);
     try {
-      // Note: balance-fetch edge function now works without auth
-      // since it only needs the smart account address
-      console.log("💰 Fetching balances for:", smartAccountAddress);
-      
-      const tokenBalances: TokenBalance[] = [];
-
-      // Fetch balance for each supported token
-      for (const [symbol, token] of Object.entries(SUPPORTED_TOKENS)) {
-        try {
-          const balanceUrl = token.address 
-            ? `balance-fetch?tokenAddress=${token.address}&address=${smartAccountAddress}`
-            : `balance-fetch?address=${smartAccountAddress}`;
-
-          const { data, error } = await supabase.functions.invoke(balanceUrl);
-          
-          if (error) throw error;
-          
-          if (data?.balance) {
-            tokenBalances.push({
-              symbol,
-              balance: data.balance,
-              decimals: token.decimals,
-            });
-          }
-        } catch (error) {
-          console.error(`Failed to fetch ${symbol} balance:`, error);
-          // Add 0 balance for failed tokens
-          tokenBalances.push({
-            symbol,
-            balance: "0.00",
-            decimals: token.decimals,
-          });
-        }
-      }
-
+      console.log("💰 Fetching balances client-side for:", smartAccountAddress);
+      const tokenBalances = await fetchAllBalances(smartAccountAddress);
       setBalances(tokenBalances);
     } catch (error: any) {
       console.error("Failed to fetch balances:", error);
