@@ -20,12 +20,6 @@ export const SUPPORTED_TOKENS: Record<string, Token> = {
     decimals: 6,
     address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Base Sepolia USDC
   },
-  USDT: {
-    symbol: "USDT",
-    name: "Tether USD",
-    decimals: 6,
-    address: "0xf6e0C6fA2f0D0E0e0e0e0e0e0e0e0e0e0e0e0e0e", // Placeholder - verify actual address
-  },
 };
 
 // Minimal ERC20 ABI for balance and transfer
