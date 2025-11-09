@@ -12,7 +12,6 @@ interface AuthContextType {
   login: () => Promise<void>;
   logout: () => Promise<void>;
   smartAccount: any;
-  getIdToken: () => Promise<string | null>;
   loginError: string | null;
   retryLogin: () => Promise<void>;
 }
@@ -76,23 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [isConnected, smartAccountAddress]);
 
-  const getIdToken = async (): Promise<string | null> => {
-    const provider = web3auth?.provider;
-    if (!provider) {
-      console.error("❌ Provider not available for ID token");
-      return null;
-    }
-    
-    try {
-      console.log("🔑 Attempting to get ID token...");
-      const idToken = await provider.request({ method: "eth_private_key" }) as string;
-      console.log("✅ ID token retrieved successfully");
-      return idToken;
-    } catch (error) {
-      console.error("❌ Failed to get ID token:", error);
-      return null;
-    }
-  };
 
   const initializeBiconomy = async () => {
     if (isInitializing) {
@@ -122,32 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSmartAccountAddress(saAddress);
 
       console.log("✅ Smart account initialized:", saAddress);
-
-      // Get ID token for backend authentication
-      const idToken = await getIdToken();
-
-      if (!idToken) {
-        console.warn("⚠️ Could not get ID token, skipping backend registration");
-        toast.success("Wallet initialized successfully!");
-        return;
-      }
-
-      // Store user in database
-      console.log("💾 Registering account in backend...");
-      const { error } = await supabase.functions.invoke('account-create', {
-        body: {
-          smartAccountAddress: saAddress,
-          idToken: idToken,
-        }
-      });
-
-      if (error) {
-        console.error("❌ Failed to create account:", error);
-        toast.error("Account created locally but backend registration failed");
-      } else {
-        console.log("✅ Account created successfully in backend");
-        toast.success("Welcome! Your account is ready.");
-      }
+      toast.success("Wallet ready! You can now send transactions.");
     } catch (error: any) {
       const errorMessage = error?.message || "Unknown error occurred";
       console.error("❌ Error initializing Biconomy:", error);
@@ -223,7 +180,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         smartAccount,
-        getIdToken,
         loginError,
         retryLogin,
       }}

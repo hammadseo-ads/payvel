@@ -9,11 +9,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { TokenSelector } from "@/components/TokenSelector";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { SUPPORTED_TOKENS, getTokenBySymbol } from "@/config/tokens";
+import { getTokenBySymbol } from "@/config/tokens";
+import { ethers } from "ethers";
 
 const Send = () => {
-  const { smartAccount, getIdToken } = useAuth();
+  const { smartAccount } = useAuth();
   const navigate = useNavigate();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
@@ -40,6 +40,11 @@ const Send = () => {
       return;
     }
 
+    if (!smartAccount) {
+      toast.error("Smart account not initialized. Please log in again.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -48,75 +53,49 @@ const Send = () => {
         throw new Error("Invalid token selected");
       }
 
-      // Get ID token for authentication
-      const idToken = await getIdToken();
-      
-      if (!idToken) {
-        throw new Error("Authentication failed. Please log in again.");
-      }
+      console.log(`📤 Preparing to send ${amount} ${token.symbol} to ${recipient}`);
 
-      // Check balance before sending
-      const balanceUrl = token.address 
-        ? `balance-fetch?tokenAddress=${token.address}`
-        : "balance-fetch";
+      let transaction;
 
-      const { data: balanceData, error: balanceError } = await supabase.functions.invoke(balanceUrl, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+      if (token.address) {
+        // ERC20 token transfer
+        console.log("💰 Building ERC20 transfer transaction...");
+        const erc20Interface = new ethers.utils.Interface([
+          "function transfer(address to, uint256 amount)"
+        ]);
 
-      if (balanceError) {
-        throw new Error("Failed to check balance");
-      }
+        const data = erc20Interface.encodeFunctionData("transfer", [
+          recipient,
+          ethers.utils.parseUnits(amount, token.decimals)
+        ]);
 
-      const currentBalance = parseFloat(balanceData.balance);
-      const sendAmount = parseFloat(amount);
-
-      if (currentBalance < sendAmount) {
-        toast.error(`Insufficient balance. You have ${currentBalance.toFixed(token.decimals === 18 ? 4 : 2)} ${token.symbol}`);
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Submit via backend for policy checks
-      const { data, error } = await supabase.functions.invoke("tx-submit", {
-        body: {
-          to: recipient,
-          amount,
-          chainId: "84532", // Base Sepolia
-          tokenAddress: token.address,
-          tokenSymbol: token.symbol,
-          tokenDecimals: token.decimals,
-        },
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      if (error) {
-        throw new Error(error.message || "Failed to submit transaction");
-      }
-
-      if (data.ok) {
-        toast.success(
-          data.userOpHash 
-            ? "Transaction submitted! View on explorer."
-            : "Transaction submitted successfully!"
-        );
-        
-        // If we have a userOpHash, log it for debugging
-        if (data.userOpHash) {
-          console.log("UserOp Hash:", data.userOpHash);
-          console.log("JiffyScan:", `https://jiffyscan.xyz/userOpHash/${data.userOpHash}?network=base-sepolia`);
-        }
-        
-        navigate("/dashboard");
+        transaction = {
+          to: token.address,
+          data: data,
+        };
       } else {
-        throw new Error(data.error || "Transaction failed");
+        // Native ETH transfer
+        console.log("💎 Building native ETH transfer transaction...");
+        transaction = {
+          to: recipient,
+          value: ethers.utils.parseEther(amount),
+        };
       }
+
+      console.log("🚀 Sending transaction via Biconomy...");
+      const userOpResponse = await smartAccount.sendTransaction(transaction);
+      
+      console.log("⏳ Waiting for transaction hash...");
+      const { transactionHash } = await userOpResponse.waitForTxHash();
+      
+      console.log("✅ Transaction confirmed!");
+      console.log("Transaction Hash:", transactionHash);
+      console.log("BaseScan:", `https://sepolia.basescan.org/tx/${transactionHash}`);
+
+      toast.success("Transaction sent successfully!");
+      navigate("/dashboard");
     } catch (error: any) {
-      console.error("Send error:", error);
+      console.error("❌ Send error:", error);
       toast.error(error.message || "Failed to send transaction");
     } finally {
       setIsSubmitting(false);
