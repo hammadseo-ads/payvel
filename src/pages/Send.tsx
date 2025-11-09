@@ -7,14 +7,17 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
+import { TokenSelector } from "@/components/TokenSelector";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPPORTED_TOKENS, getTokenBySymbol } from "@/config/tokens";
 
 const Send = () => {
   const { smartAccount, getIdToken } = useAuth();
   const navigate = useNavigate();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
+  const [selectedToken, setSelectedToken] = useState("ETH");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isValidAddress = (address: string) => {
@@ -40,6 +43,11 @@ const Send = () => {
     setIsSubmitting(true);
 
     try {
+      const token = getTokenBySymbol(selectedToken);
+      if (!token) {
+        throw new Error("Invalid token selected");
+      }
+
       // Get ID token for authentication
       const idToken = await getIdToken();
       
@@ -48,7 +56,11 @@ const Send = () => {
       }
 
       // Check balance before sending
-      const { data: balanceData, error: balanceError } = await supabase.functions.invoke("balance-fetch", {
+      const balanceUrl = token.address 
+        ? `balance-fetch?tokenAddress=${token.address}`
+        : "balance-fetch";
+
+      const { data: balanceData, error: balanceError } = await supabase.functions.invoke(balanceUrl, {
         headers: {
           Authorization: `Bearer ${idToken}`,
         },
@@ -62,7 +74,7 @@ const Send = () => {
       const sendAmount = parseFloat(amount);
 
       if (currentBalance < sendAmount) {
-        toast.error(`Insufficient balance. You have ${currentBalance.toFixed(4)} ETH`);
+        toast.error(`Insufficient balance. You have ${currentBalance.toFixed(token.decimals === 18 ? 4 : 2)} ${token.symbol}`);
         setIsSubmitting(false);
         return;
       }
@@ -73,6 +85,9 @@ const Send = () => {
           to: recipient,
           amount,
           chainId: "84532", // Base Sepolia
+          tokenAddress: token.address,
+          tokenSymbol: token.symbol,
+          tokenDecimals: token.decimals,
         },
         headers: {
           Authorization: `Bearer ${idToken}`,
@@ -125,11 +140,19 @@ const Send = () => {
 
           <div>
             <h1 className="text-3xl font-bold mb-2">Send</h1>
-            <p className="text-muted-foreground">Send ETH to any address</p>
+            <p className="text-muted-foreground">Send crypto to any address</p>
           </div>
 
           <Card className="p-6 glass-effect">
             <div className="space-y-6">
+              <div>
+                <Label htmlFor="token">Select Token</Label>
+                <TokenSelector
+                  selectedToken={selectedToken}
+                  onTokenChange={setSelectedToken}
+                />
+              </div>
+
               <div>
                 <Label htmlFor="recipient">Recipient Address</Label>
                 <Input
@@ -142,7 +165,7 @@ const Send = () => {
               </div>
 
               <div>
-                <Label htmlFor="amount">Amount (ETH)</Label>
+                <Label htmlFor="amount">Amount ({selectedToken})</Label>
                 <Input
                   id="amount"
                   type="number"

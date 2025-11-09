@@ -24,6 +24,9 @@ export type Database = {
           id: string
           status: string | null
           to_address: string
+          token_address: string | null
+          token_decimals: number | null
+          token_symbol: string | null
           tx_hash: string | null
           user_id: string
           user_op_hash: string | null
@@ -37,6 +40,9 @@ export type Database = {
           id?: string
           status?: string | null
           to_address: string
+          token_address?: string | null
+          token_decimals?: number | null
+          token_symbol?: string | null
           tx_hash?: string | null
           user_id: string
           user_op_hash?: string | null
@@ -50,6 +56,9 @@ export type Database = {
           id?: string
           status?: string | null
           to_address?: string
+          token_address?: string | null
+          token_decimals?: number | null
+          token_symbol?: string | null
           tx_hash?: string | null
           user_id?: string
           user_op_hash?: string | null

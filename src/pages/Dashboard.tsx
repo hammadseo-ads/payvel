@@ -8,12 +8,20 @@ import { WalletCard } from "@/components/WalletCard";
 import { TransactionList } from "@/components/TransactionList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SUPPORTED_TOKENS } from "@/config/tokens";
+
+interface TokenBalance {
+  symbol: string;
+  balance: string;
+  decimals: number;
+}
+
 
 const Dashboard = () => {
   const { isAuthenticated, isLoading, smartAccountAddress, getIdToken } = useAuth();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
-  const [balance, setBalance] = useState<string>("0.00");
+  const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
 
   useEffect(() => {
@@ -67,21 +75,50 @@ const Dashboard = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke("balance-fetch", {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-      
-      if (error) throw error;
-      
-      if (data?.balance) {
-        setBalance(data.balance);
+      const tokenBalances: TokenBalance[] = [];
+
+      // Fetch balance for each supported token
+      for (const [symbol, token] of Object.entries(SUPPORTED_TOKENS)) {
+        try {
+          const balanceUrl = token.address 
+            ? `balance-fetch?tokenAddress=${token.address}`
+            : "balance-fetch";
+
+          const { data, error } = await supabase.functions.invoke(balanceUrl, {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+          
+          if (error) throw error;
+          
+          if (data?.balance) {
+            tokenBalances.push({
+              symbol,
+              balance: data.balance,
+              decimals: token.decimals,
+            });
+          }
+        } catch (error) {
+          console.error(`Failed to fetch ${symbol} balance:`, error);
+          // Add 0 balance for failed tokens
+          tokenBalances.push({
+            symbol,
+            balance: "0.00",
+            decimals: token.decimals,
+          });
+        }
       }
+
+      setBalances(tokenBalances);
     } catch (error: any) {
-      console.error("Failed to fetch balance:", error);
-      toast.error("Failed to load balance");
-      setBalance("0.00");
+      console.error("Failed to fetch balances:", error);
+      toast.error("Failed to load balances");
+      setBalances([
+        { symbol: "ETH", balance: "0.00", decimals: 18 },
+        { symbol: "USDC", balance: "0.00", decimals: 6 },
+        { symbol: "USDT", balance: "0.00", decimals: 6 },
+      ]);
     } finally {
       setIsLoadingBalance(false);
     }
@@ -111,7 +148,7 @@ const Dashboard = () => {
 
           <WalletCard 
             address={smartAccountAddress} 
-            balance={balance}
+            balances={balances}
             isLoading={isLoadingBalance}
           />
 

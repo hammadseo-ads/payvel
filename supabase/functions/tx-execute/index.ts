@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as jose from "https://deno.land/x/jose@v5.9.6/index.ts";
+import { ethers } from "https://esm.sh/ethers@5.7.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +43,7 @@ serve(async (req) => {
     console.log("🔐 Authenticated user:", web3authUserId);
 
     // Get request body
-    const { transactionId, to, amount } = await req.json();
+    const { transactionId, to, amount, tokenAddress, tokenDecimals } = await req.json();
 
     // Validate input
     if (!transactionId || !to || !amount) {
@@ -51,6 +52,9 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const decimals = tokenDecimals || 18;
+    console.log(`💰 Transaction details:`, { to, amount, tokenAddress: tokenAddress || "ETH (native)", decimals });
 
     // Get user from database
     const { data: userData, error: userError } = await supabase
@@ -81,8 +85,47 @@ serve(async (req) => {
 
     console.log("🚀 Preparing transaction:", { to, amount, from: smartAccountAddress });
 
-    // Convert amount to wei (ETH to wei: multiply by 10^18)
-    const amountInWei = `0x${(BigInt(parseFloat(amount) * 1e18)).toString(16)}`;
+    let callData: string;
+
+    // Build calldata based on whether it's ETH or ERC20 transfer
+    if (!tokenAddress) {
+      // Native ETH transfer
+      const amountInWei = `0x${(BigInt(parseFloat(amount) * Math.pow(10, decimals))).toString(16)}`;
+      
+      // execute(address dest, uint256 value, bytes calldata func)
+      callData = `0xb61d27f6${
+        to.slice(2).padStart(64, '0')
+      }${
+        amountInWei.slice(2).padStart(64, '0')
+      }${
+        '60'.padStart(64, '0') // offset for bytes
+      }${'00'.padStart(64, '0')}`; // empty bytes length
+    } else {
+      // ERC20 transfer - encode transfer(address, uint256)
+      const ERC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
+      const iface = new ethers.utils.Interface(ERC20_ABI);
+      
+      const amountInTokenUnits = BigInt(parseFloat(amount) * Math.pow(10, decimals));
+      const transferData = iface.encodeFunctionData("transfer", [to, amountInTokenUnits.toString()]);
+      
+      // Wrap in smart account execute call: execute(tokenAddress, 0, transferData)
+      const valueInWei = "0x00"; // No ETH value for token transfers
+      
+      callData = `0xb61d27f6${
+        tokenAddress.slice(2).padStart(64, '0')
+      }${
+        valueInWei.slice(2).padStart(64, '0')
+      }${
+        '60'.padStart(64, '0') // offset for bytes
+      }${
+        transferData.slice(2).length.toString(16).padStart(64, '0')
+      }${
+        transferData.slice(2)
+      }`;
+      
+      console.log(`📝 ERC20 transfer encoded for token: ${tokenAddress}`);
+    }
+
 
     // Get nonce from smart account
     const nonceResponse = await fetch(chainRpcUrl, {
@@ -100,17 +143,6 @@ serve(async (req) => {
     const nonce = nonceData.result;
 
     console.log("📝 Building user operation with nonce:", nonce);
-
-    // Build calldata for ETH transfer
-    // For a simple ETH transfer, we use the execute function of the smart account
-    // execute(address dest, uint256 value, bytes calldata func)
-    const callData = `0xb61d27f6${
-      to.slice(2).padStart(64, '0')
-    }${
-      amountInWei.slice(2).padStart(64, '0')
-    }${
-      '60'.padStart(64, '0') // offset for bytes
-    }${'00'.padStart(64, '0')}`; // empty bytes length
 
     // Create user operation
     const userOp = {

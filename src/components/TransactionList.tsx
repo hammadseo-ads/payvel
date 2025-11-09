@@ -11,6 +11,8 @@ interface Transaction {
   tx_hash?: string;
   user_op_hash?: string;
   created_at: string;
+  token_symbol?: string;
+  token_decimals?: number;
 }
 
 interface TransactionListProps {
@@ -66,7 +68,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
                 )}
               </div>
               {tx.amount && (
-                <p className="text-sm text-muted-foreground">{tx.amount} ETH</p>
+                <p className="text-sm text-muted-foreground">{tx.amount} {tx.token_symbol || "ETH"}</p>
               )}
             </div>
             <Badge

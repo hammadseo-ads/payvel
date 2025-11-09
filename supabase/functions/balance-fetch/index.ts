@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import * as jose from "https://deno.land/x/jose@v5.9.6/index.ts";
+import { ethers } from "https://esm.sh/ethers@5.7.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +15,14 @@ serve(async (req) => {
 
   try {
     console.log("📊 Balance fetch request received");
+
+    // Get optional tokenAddress from query params
+    const url = new URL(req.url);
+    const tokenAddress = url.searchParams.get("tokenAddress");
+    
+    if (tokenAddress) {
+      console.log(`📊 Fetching balance for token: ${tokenAddress}`);
+    }
 
     // Verify JWT token
     const authHeader = req.headers.get("authorization");
@@ -60,19 +69,69 @@ serve(async (req) => {
     const smartAccountAddress = user.smart_account_address;
     console.log(`📍 Fetching balance for address: ${smartAccountAddress}`);
 
-    // Fetch balance from blockchain
     const rpcUrl = Deno.env.get("CHAIN_RPC_URL");
     if (!rpcUrl) {
       throw new Error("Missing RPC URL configuration");
     }
+
+    // If no token address, fetch ETH balance
+    if (!tokenAddress) {
+      const rpcResponse = await fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "eth_getBalance",
+          params: [smartAccountAddress, "latest"],
+          id: 1,
+        }),
+      });
+
+      const rpcData = await rpcResponse.json();
+
+      if (rpcData.error) {
+        console.error("❌ RPC error:", rpcData.error);
+        throw new Error(`RPC error: ${rpcData.error.message}`);
+      }
+
+      const balanceWei = BigInt(rpcData.result);
+      const balanceEth = Number(balanceWei) / 1e18;
+      const formattedBalance = balanceEth.toFixed(4);
+
+      console.log(`✅ Balance fetched: ${formattedBalance} ETH (${rpcData.result} wei)`);
+
+      return new Response(
+        JSON.stringify({
+          balance: formattedBalance,
+          symbol: "ETH",
+          decimals: 18,
+          address: smartAccountAddress,
+          raw: rpcData.result,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Fetch ERC20 token balance
+    const ERC20_ABI = ["function balanceOf(address) view returns (uint256)"];
+    const iface = new ethers.utils.Interface(ERC20_ABI);
+    const balanceOfData = iface.encodeFunctionData("balanceOf", [smartAccountAddress]);
 
     const rpcResponse = await fetch(rpcUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         jsonrpc: "2.0",
-        method: "eth_getBalance",
-        params: [smartAccountAddress, "latest"],
+        method: "eth_call",
+        params: [
+          {
+            to: tokenAddress,
+            data: balanceOfData,
+          },
+          "latest",
+        ],
         id: 1,
       }),
     });
@@ -84,17 +143,22 @@ serve(async (req) => {
       throw new Error(`RPC error: ${rpcData.error.message}`);
     }
 
-    // Convert hex balance to ETH
+    // Decode balance
     const balanceWei = BigInt(rpcData.result);
-    const balanceEth = Number(balanceWei) / 1e18;
-    const formattedBalance = balanceEth.toFixed(4);
+    
+    // Get token decimals (assume 6 for USDC/USDT, can be enhanced)
+    const decimals = 6; // USDC/USDT use 6 decimals
+    const balance = Number(balanceWei) / Math.pow(10, decimals);
+    const formattedBalance = balance.toFixed(2);
 
-    console.log(`✅ Balance fetched: ${formattedBalance} ETH (${rpcData.result} wei)`);
+    console.log(`✅ Token balance fetched: ${formattedBalance} (${rpcData.result} raw)`);
 
     return new Response(
       JSON.stringify({
         balance: formattedBalance,
+        decimals,
         address: smartAccountAddress,
+        tokenAddress,
         raw: rpcData.result,
       }),
       {

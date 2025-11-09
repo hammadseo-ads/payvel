@@ -58,7 +58,7 @@ serve(async (req) => {
         )
         .refine(
           (val) => parseFloat(val) <= 1000000,
-          "Amount exceeds maximum allowed (1,000,000 ETH)"
+          "Amount exceeds maximum allowed (1,000,000)"
         ),
       chainId: z.string()
         .regex(/^\d+$/, "Chain ID must be numeric")
@@ -66,6 +66,9 @@ serve(async (req) => {
           (val) => ["84532", "8453"].includes(val),
           "Unsupported chain ID. Only Base Sepolia (84532) and Base Mainnet (8453) are supported"
         ),
+      tokenAddress: z.string().nullable().optional(),
+      tokenSymbol: z.string().optional(),
+      tokenDecimals: z.number().optional(),
     });
 
     // Validate input
@@ -84,7 +87,7 @@ serve(async (req) => {
       );
     }
 
-    const { to, amount, chainId } = validation.data;
+    const { to, amount, chainId, tokenAddress, tokenSymbol, tokenDecimals } = validation.data;
 
     // Get user from database
     const { data: userData, error: userError } = await supabase
@@ -101,7 +104,14 @@ serve(async (req) => {
       );
     }
 
-    console.log("💰 Transaction request:", { to, amount, chainId, from: userData.smart_account_address });
+    console.log("💰 Transaction request:", { 
+      to, 
+      amount, 
+      chainId, 
+      tokenAddress: tokenAddress || "ETH (native)",
+      tokenSymbol: tokenSymbol || "ETH",
+      from: userData.smart_account_address 
+    });
 
     // Log transaction intent with normalized address
     const { data: txData, error: txError } = await supabase
@@ -112,6 +122,9 @@ serve(async (req) => {
         to_address: to.toLowerCase(), // Normalize address to lowercase
         amount: amount,
         status: "pending",
+        token_address: tokenAddress || null,
+        token_symbol: tokenSymbol || "ETH",
+        token_decimals: tokenDecimals || 18,
       })
       .select()
       .single();
@@ -141,6 +154,8 @@ serve(async (req) => {
             to,
             amount,
             chainId,
+            tokenAddress,
+            tokenDecimals: tokenDecimals || 18,
           }),
         }
       );

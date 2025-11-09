@@ -2,16 +2,24 @@ import { Copy, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { shortenAddress } from "@/lib/biconomy";
 import { toast } from "sonner";
 
+interface TokenBalance {
+  symbol: string;
+  balance: string;
+  decimals: number;
+}
+
 interface WalletCardProps {
   address: string;
-  balance?: string;
+  balances?: TokenBalance[];
   isLoading?: boolean;
 }
 
-export function WalletCard({ address, balance = "0.00", isLoading = false }: WalletCardProps) {
+
+export function WalletCard({ address, balances = [], isLoading = false }: WalletCardProps) {
   const copyAddress = () => {
     navigator.clipboard.writeText(address);
     toast.success("Address copied to clipboard");
@@ -31,33 +39,46 @@ export function WalletCard({ address, balance = "0.00", isLoading = false }: Wal
           </span>
         </div>
 
-        <div className="space-y-2">
-          <div className="text-3xl font-bold">
-            {isLoading ? (
-              <Skeleton className="h-10 w-32" />
-            ) : (
-              `${balance} ETH`
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{shortenAddress(address)}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={copyAddress}
-              className="h-6 w-6 p-0"
-            >
-              <Copy className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={openExplorer}
-              className="h-6 w-6 p-0"
-            >
-              <ExternalLink className="w-3 h-3" />
-            </Button>
-          </div>
+        <Tabs defaultValue={balances[0]?.symbol || "ETH"} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            {balances.map((token) => (
+              <TabsTrigger key={token.symbol} value={token.symbol}>
+                {token.symbol}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {balances.map((token) => (
+            <TabsContent key={token.symbol} value={token.symbol} className="space-y-2 mt-4">
+              <div className="text-3xl font-bold">
+                {isLoading ? (
+                  <Skeleton className="h-10 w-32" />
+                ) : (
+                  `${token.balance} ${token.symbol}`
+                )}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{shortenAddress(address)}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={copyAddress}
+            className="h-6 w-6 p-0"
+          >
+            <Copy className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={openExplorer}
+            className="h-6 w-6 p-0"
+          >
+            <ExternalLink className="w-3 h-3" />
+          </Button>
         </div>
       </div>
     </Card>
